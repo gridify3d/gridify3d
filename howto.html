@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gridify3D — How-To Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue:    #007aff;
+  --purple:  #5856d6;
+  --cyan:    #32ade6;
+  --grad:    linear-gradient(135deg, #32ade6 0%, #007aff 45%, #5856d6 100%);
+  --grad-text: linear-gradient(110deg, #32ade6 0%, #007aff 40%, #5856d6 100%);
+  --bg:      #f5f5f7;
+  --surface: #ffffff;
+  --surface2: #f5f5f7;
+  --border:  rgba(0,0,0,0.08);
+  --text:    #1d1d1f;
+  --text2:   #6e6e73;
+  --text3:   #aeaeb2;
+  --radius:  18px;
+  --radius-sm: 12px;
+  --shadow:  0 2px 20px rgba(0,0,0,0.07), 0 0 0 0.5px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.12), 0 0 0 0.5px rgba(0,0,0,0.05);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(245,245,247,0.82);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 0.5px solid var(--border);
+  height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px;
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; }
+.nav-logo img { height: 26px; }
+.nav-logo span {
+  font-size: 17px; font-weight: 600; letter-spacing: -0.3px;
+  background: var(--grad-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.nav-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--grad);
+  color: white; font-size: 14px; font-weight: 500;
+  padding: 8px 18px; border-radius: 100px;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.nav-cta:hover { opacity: 0.88; transform: scale(1.02); text-decoration: none; }
+
+/* ── LAYOUT ── */
+.wrap {
+  max-width: 1080px; margin: 0 auto;
+  padding: 96px 32px 80px;
+  display: grid; grid-template-columns: 220px 1fr; gap: 48px;
+}
+@media (max-width: 880px) {
+  .wrap { grid-template-columns: 1fr; gap: 0; padding-top: 80px; }
+  .toc { display: none; }
+}
+
+/* ── TOC ── */
+.toc {
+  position: sticky; top: 84px; align-self: start;
+  font-size: 14px;
+}
+.toc-title {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--text3); margin-bottom: 12px;
+}
+.toc a {
+  display: block; color: var(--text2); padding: 5px 0;
+  border-left: 2px solid transparent; padding-left: 12px;
+  margin-left: -2px; transition: color 0.15s, border-color 0.15s;
+}
+.toc a:hover { color: var(--blue); text-decoration: none; border-left-color: var(--cyan); }
+.toc a.sub { padding-left: 26px; font-size: 13px; color: var(--text3); }
+
+/* ── CONTENT ── */
+.content { min-width: 0; }
+
+.doc-hero { margin-bottom: 56px; }
+.doc-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: white; border: 0.5px solid var(--border);
+  border-radius: 100px; padding: 5px 14px;
+  font-size: 13px; color: var(--text2); margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.doc-badge span { width: 7px; height: 7px; border-radius: 50%; background: var(--grad); }
+.doc-hero h1 {
+  font-size: clamp(34px, 5vw, 52px); font-weight: 600;
+  letter-spacing: -1.5px; line-height: 1.08; margin-bottom: 16px;
+}
+.doc-hero h1 em { font-style: normal; background: var(--grad-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.doc-hero p { font-size: 19px; color: var(--text2); font-weight: 300; max-width: 640px; }
+
+h2 {
+  font-size: 28px; font-weight: 600; letter-spacing: -0.6px;
+  margin: 64px 0 8px; padding-top: 16px; scroll-margin-top: 72px;
+  display: flex; align-items: center; gap: 12px;
+}
+h2 .num {
+  font-size: 14px; font-weight: 600; color: white;
+  background: var(--grad); width: 30px; height: 30px; border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+h3 {
+  font-size: 20px; font-weight: 600; letter-spacing: -0.3px;
+  margin: 36px 0 6px; scroll-margin-top: 72px;
+}
+.section-intro { color: var(--text2); font-size: 17px; margin-bottom: 20px; max-width: 700px; }
+p { margin-bottom: 14px; }
+.content p { color: var(--text); }
+
+strong { font-weight: 600; }
+code {
+  font-family: 'DM Mono', monospace; font-size: 0.88em;
+  background: #ececf0; padding: 2px 7px; border-radius: 6px; color: #5856d6;
+}
+
+ul, ol { margin: 0 0 18px 0; padding-left: 4px; list-style: none; }
+ul li, ol li {
+  position: relative; padding-left: 26px; margin-bottom: 10px; color: var(--text);
+}
+ul li::before {
+  content: ''; position: absolute; left: 6px; top: 11px;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--grad);
+}
+ol { counter-reset: step; }
+ol li { counter-increment: step; }
+ol li::before {
+  content: counter(step); position: absolute; left: 0; top: 1px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--grad); color: white;
+  font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── IMAGE PLACEHOLDER ── */
+figure {
+  margin: 24px 0 28px; border-radius: var(--radius);
+  overflow: hidden; box-shadow: var(--shadow);
+  border: 0.5px solid var(--border); background: white;
+}
+figure img { width: 100%; display: block; }
+figcaption {
+  font-size: 13px; color: var(--text2); padding: 10px 16px;
+  background: var(--surface2); border-top: 0.5px solid var(--border);
+}
+
+/* ── CALLOUTS ── */
+.callout {
+  border-radius: var(--radius-sm); padding: 14px 18px 14px 16px;
+  margin: 18px 0; font-size: 15px; line-height: 1.55;
+  border-left: 3px solid; display: flex; gap: 12px;
+}
+.callout .ico { font-size: 18px; flex-shrink: 0; line-height: 1.4; }
+.callout.tip   { background: #f0fff4; border-color: #34c759; color: #1b5e20; }
+.callout.note  { background: #eef5ff; border-color: var(--blue); color: #1a3a6b; }
+.callout.warn  { background: #fff8e6; border-color: #ff9f0a; color: #7a4f00; }
+
+/* ── PARAM TABLE ── */
+.ptable {
+  width: 100%; border-collapse: collapse; margin: 18px 0 24px;
+  font-size: 14px; background: white; border-radius: var(--radius-sm);
+  overflow: hidden; box-shadow: var(--shadow);
+}
+.ptable th {
+  text-align: left; padding: 11px 16px; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.6px; color: var(--text2);
+  background: var(--surface2); font-weight: 600;
+  border-bottom: 0.5px solid var(--border);
+}
+.ptable td { padding: 11px 16px; border-bottom: 0.5px solid var(--border); vertical-align: top; }
+.ptable tr:last-child td { border-bottom: none; }
+.ptable td:first-child { font-weight: 600; white-space: nowrap; }
+.ptable code { white-space: nowrap; }
+
+/* ── MODE CARDS ── */
+.mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+@media (max-width: 620px) { .mode-cards { grid-template-columns: 1fr; } }
+.mode-card {
+  background: white; border-radius: var(--radius); padding: 24px;
+  border: 0.5px solid var(--border); box-shadow: var(--shadow);
+}
+.mode-card .mc-icon { font-size: 30px; margin-bottom: 12px; }
+.mode-card h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+.mode-card p { font-size: 14px; color: var(--text2); margin: 0; }
+
+/* ── DIVIDER ── */
+.hr { height: 0.5px; background: var(--border); margin: 56px 0; border: none; }
+
+/* ── FOOTER ── */
+footer {
+  background: #1c1c1e; border-top: 0.5px solid rgba(255,255,255,0.08);
+  padding: 32px; text-align: center;
+}
+footer p { font-size: 13px; color: rgba(255,255,255,0.4); margin: 0; }
+footer a { color: rgba(255,255,255,0.7); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <img src="https://app.gridify3d.com/static/Gridify3D.png" alt="Gridify3D" onerror="this.style.display='none'">
+    <span>Gridify3D</span>
+  </div>
+  <a class="nav-cta" href="https://app.gridify3d.com" target="_blank">
+    Open App
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg>
+  </a>
+</nav>
+
+<div class="wrap">
+
+  <!-- TOC -->
+  <aside class="toc">
+    <div class="toc-title">Guide</div>
+    <a href="#start">Getting started</a>
+    <a href="#upload">1 · Upload your STL</a>
+    <a href="#modes">2 · Choose a mode</a>
+    <a href="#wire">3 · Wire Grid mode</a>
+    <a href="#wire-pattern" class="sub">Pattern &amp; size</a>
+    <a href="#wire-tube" class="sub">Tube diameter</a>
+    <a href="#offset" class="sub">Center Offset</a>
+    <a href="#surface">4 · Surface mode</a>
+    <a href="#surface-lines" class="sub">Lines &amp; intersections</a>
+    <a href="#surface-punch" class="sub">Punch &amp; Stamp</a>
+    <a href="#shared">5 · Shared options</a>
+    <a href="#zones" class="sub">Exclusion Zones</a>
+    <a href="#scale" class="sub">Scale</a>
+    <a href="#openbottom" class="sub">Open Bottom</a>
+    <a href="#save">6 · Save &amp; continue later</a>
+    <a href="#generate">7 · Generate &amp; download</a>
+    <a href="#tips">Tips &amp; troubleshooting</a>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <div class="doc-hero" id="start">
+      <div class="doc-badge"><span></span> How-To Guide</div>
+      <h1>From STL to a<br><em>printable wireframe</em></h1>
+      <p>This guide walks you through everything Gridify3D can do — from your first upload to a finished, print-ready file. No installation, no plugins; it all runs in your browser.</p>
+    </div>
+
+    <div class="callout note">
+      <span class="ico">💡</span>
+      <div>Gridify3D works entirely in the browser. Your STL is processed on the server only while a job runs and is <strong>never stored</strong>. Best results come from a clean, watertight STL.</div>
+    </div>
+
+    <p>The interface has two halves: a <strong>control panel on the left</strong> where you set everything up, and a <strong>3D preview on the right</strong> where you inspect your model and the result. The big blue <strong>Generate</strong> button sits at the bottom of the control panel.</p>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/overview.png" alt="overview" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>The Gridify3D workspace — controls on the left, live 3D preview on the right.</figcaption>
+    </figure>
+
+    <!-- 1 · UPLOAD -->
+    <h2 id="upload"><span class="num">1</span> Upload your STL</h2>
+    <p class="section-intro">Everything starts with a 3D model in STL format.</p>
+    <ol>
+      <li>Open the <strong>📁 Input File</strong> panel at the top of the controls.</li>
+      <li>Click <strong>Choose STL File</strong>, or drag &amp; drop a <code>.stl</code> file directly onto the drop zone.</li>
+      <li>The model appears in the right-hand preview. Drag to rotate, scroll to zoom, and click a face of the cube in the corner to snap to a standard view.</li>
+    </ol>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/upload.png" alt="upload" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>Drop an STL onto the upload zone — it loads instantly into the preview.</figcaption>
+    </figure>
+
+    <div class="callout tip">
+      <span class="ico">✅</span>
+      <div>For best results use a <strong>watertight</strong> (manifold) model. Models with holes or non-manifold edges can produce unexpected results.</div>
+    </div>
+
+    <!-- 2 · MODES -->
+    <h2 id="modes"><span class="num">2</span> Choose a mode</h2>
+    <p class="section-intro">Right below the upload panel you choose how Gridify3D transforms your model. There are two fundamentally different modes.</p>
+
+    <div class="mode-cards">
+      <div class="mode-card">
+        <div class="mc-icon">🔷</div>
+        <h4>Wire Grid</h4>
+        <p>Turns the surface of your model into a wireframe lattice — diamonds, hexagons, squares and more, projected cleanly over the whole shape.</p>
+      </div>
+      <div class="mode-card">
+        <div class="mc-icon">🥚</div>
+        <h4>Surface</h4>
+        <p>Keeps a solid shell and decorates it: punch holes through it or stamp raised shapes onto it, at evenly spaced points.</p>
+      </div>
+    </div>
+
+    <p>Click <strong>🔷 Wire Grid</strong> or <strong>🥚 Surface</strong> to switch. The control panel updates to show the options for the mode you picked. We'll cover each in turn.</p>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/mode-toggle.png" alt="mode toggle" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>The mode toggle switches the entire control panel between the two workflows.</figcaption>
+    </figure>
+
+    <!-- 3 · WIRE GRID -->
+    <h2 id="wire"><span class="num">3</span> Wire Grid mode</h2>
+    <p class="section-intro">Wire Grid turns your model into a printable lattice. You pick a pattern, set how fine it is, and how thick the rods are.</p>
+
+    <h3 id="wire-pattern">Choose a pattern</h3>
+    <p>In the <strong>🔷 Wire Grid</strong> panel, pick the pattern that's projected onto the surface:</p>
+    <ul>
+      <li><strong>💎 Diamond</strong> — the classic crossing-rods look.</li>
+      <li><strong>⬛ Square</strong> — a regular grid of squares.</li>
+      <li><strong>🔺 Triangle</strong> — triangular mesh, very rigid.</li>
+      <li><strong>⬡ Hexagon</strong> — honeycomb cells.</li>
+      <li><strong>⟋ Diagonal Weave</strong> / <strong>⟍ Counter Weave</strong> — woven diagonal lines.</li>
+      <li><strong>⬡ Voronoi</strong> — organic, irregular cells.</li>
+    </ul>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/patterns.png" alt="patterns" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>The same model rendered with different patterns. Each is projected seamlessly over the surface.</figcaption>
+    </figure>
+
+    <h3>Set the pattern size</h3>
+    <p>The <strong>Pattern Size</strong> slider controls how fine the grid is, measured in degrees. <strong>Smaller values = more, smaller cells; larger values = fewer, larger cells.</strong> Only seamless values are offered, so the pattern always wraps cleanly around the model.</p>
+
+    <div class="callout note">
+      <span class="ico">⚙️</span>
+      <div>You can change the <strong>default</strong> Pattern Size (and the limits of most other sliders) in the <strong>⚙️ Settings</strong> dialog, reachable from the top bar.</div>
+    </div>
+
+    <h3 id="wire-tube">Tube diameter &amp; open areas</h3>
+    <table class="ptable">
+      <tr><th>Setting</th><th>What it does</th></tr>
+      <tr><td>⭕ Tube Diameter</td><td>The outer thickness of every rod in the wireframe. Thicker rods are stronger but heavier and use more material.</td></tr>
+      <tr><td>🔵 Auto-fill open areas</td><td>When on, the uncovered polar regions (top/bottom of the projection) are closed with a smooth shell cap instead of being left open.</td></tr>
+    </table>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/wire-settings.png" alt="wire settings" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>Wire Grid settings — pattern size, tube diameter and the auto-fill toggle.</figcaption>
+    </figure>
+
+    <h3 id="offset">🎯 Center Offset</h3>
+    <p>The pattern is projected outward from a center point. By default that's the model's centroid. The <strong>X / Y / Z</strong> offset sliders shift that center, which changes how the pattern wraps around the model — useful for asymmetric shapes. Hit <strong>✕ Reset</strong> to recenter.</p>
+    <div class="callout note">
+      <span class="ico">🔷</span>
+      <div>Center Offset is a Wire Grid feature only — it doesn't appear in Surface mode.</div>
+    </div>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/center-offset.png" alt="center offset" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>Shifting the projection center changes how the wire pattern wraps the model.</figcaption>
+    </figure>
+
+    <!-- 4 · SURFACE -->
+    <h2 id="surface"><span class="num">4</span> Surface mode</h2>
+    <p class="section-intro">Surface mode keeps a solid shell of your model and decorates it. Shapes are placed at evenly spaced points across the surface, and you decide whether they're punched <em>through</em> the wall or stamped <em>onto</em> it.</p>
+
+    <h3 id="surface-lines">Lines &amp; Intersections</h3>
+    <p>This panel defines the grid of points where shapes will be placed.</p>
+    <table class="ptable">
+      <tr><th>Setting</th><th>What it does</th></tr>
+      <tr><td>Line Spacing</td><td>Distance between the grid lines (X · Y · Z). Smaller spacing = more points = more shapes.</td></tr>
+      <tr><td>Edge Margin</td><td>How many line-spacings to keep clear of the model's edges, so shapes don't sit right on a rim.</td></tr>
+      <tr><td>Min Point Distance</td><td>Filters out points that are too close together, as a percentage of the line spacing. Prevents overlapping shapes.</td></tr>
+    </table>
+    <p>Click <strong>🔍 Preview Lines &amp; Intersections</strong> to see exactly where shapes will land <em>before</em> you generate.</p>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/surface-lines.png" alt="surface lines" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>Use the preview to check intersection placement before generating.</figcaption>
+    </figure>
+
+    <h3 id="surface-punch">Punch &amp; Stamp</h3>
+    <p>Here you choose the <strong>shape</strong>, then whether to <strong>punch</strong> or <strong>stamp</strong> it.</p>
+    <ul>
+      <li><strong>Shapes:</strong> ⚫ Circle · ⭐ Star · ❤️ Heart · 🌸 Flower · 🔵 Dome.</li>
+      <li><strong>🕳 Punch</strong> cuts the shape as a hole straight through the surface wall.</li>
+      <li><strong>🔴 Stamp</strong> raises the shape outward from the surface as a relief.</li>
+    </ul>
+
+    <table class="ptable">
+      <tr><th>Setting</th><th>What it does</th><th>When</th></tr>
+      <tr><td>Surface Thickness</td><td>Thickness of the shell wall in mm.</td><td>Punch</td></tr>
+      <tr><td>Stamp Height</td><td>How far the stamped shape protrudes above the surface.</td><td>Stamp</td></tr>
+      <tr><td>Radius</td><td>Size of each punched/stamped shape.</td><td>Both</td></tr>
+    </table>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/punch-stamp.png" alt="punch stamp" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>Pick a shape, then punch it through the wall or stamp it as a raised relief.</figcaption>
+    </figure>
+
+    <div class="callout tip">
+      <span class="ico">💡</span>
+      <div>Watch the live warnings under the radius slider — if a radius is too large for the chosen spacing or wall thickness, Gridify3D flags it so you can adjust before generating.</div>
+    </div>
+
+    <!-- 5 · SHARED -->
+    <h2 id="shared"><span class="num">5</span> Shared options</h2>
+    <p class="section-intro">These panels work in <em>both</em> modes and let you fine-tune the result.</p>
+
+    <h3 id="zones">🎨 Exclusion Zones</h3>
+    <p>Sometimes you want part of the model left solid — a flat base, a logo area, a spot that shouldn't have holes. Exclusion Zones let you paint those areas directly on the model.</p>
+    <ul>
+      <li><strong>✋ Off</strong> — normal rotate/inspect mode.</li>
+      <li><strong>⬆⬇ Select</strong> — click &amp; drag on the model to mark a surface area.</li>
+      <li><strong>🖌 Brush</strong> — paint zones freehand; adjust the brush <strong>Radius</strong> as needed.</li>
+      <li><strong>🔀 Angle</strong> — when on, the selection stops automatically at sharp/concave transitions, so it's easy to grab just one panel or face.</li>
+      <li><strong>↩ Undo</strong> / <strong>✕ Clear</strong> — step back or remove all zones.</li>
+    </ul>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/zones.png" alt="zones" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>Paint zones directly on the model to keep selected areas solid.</figcaption>
+    </figure>
+
+    <h3 id="scale">📐 Scale Model</h3>
+    <p>Resize the model along each axis independently with the <strong>X / Y / Z</strong> sliders. Turn on <strong>🔗 Lock axes</strong> to scale uniformly. <strong>↩ Undo</strong> and <strong>✕ Reset</strong> are there if you overshoot. The preview updates live, so what you see is what you'll print. Scale is available in both Wire Grid and Surface mode.</p>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/scale.png" alt="scale model" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>Per-axis scaling with optional axis lock — live in the preview.</figcaption>
+    </figure>
+
+    <h3 id="openbottom">⬇️ Open Bottom</h3>
+    <p>For objects that need a flat, open base — like a tealight holder or vase — enable <strong>Open Bottom</strong>. It cuts the model at a height you choose and can add a rounded rim to tidy the cut edge.</p>
+    <table class="ptable">
+      <tr><th>Setting</th><th>What it does</th></tr>
+      <tr><td>✂️ Cut Height</td><td>How far up from the lowest point the model is cut open.</td></tr>
+      <tr><td>⭕ Add Rim</td><td>Connects the cut edges with a smooth D-profile rim. In Wire Grid mode the rim size is a factor of the tube radius; in Surface mode it's set directly in mm.</td></tr>
+    </table>
+
+    <div class="callout tip">
+      <span class="ico">🕯️</span>
+      <div>Open Bottom + a rim is the go-to combination for <strong>tealight holders</strong> — it gives a clean, stable opening at the base.</div>
+    </div>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/open-bottom.png" alt="open bottom" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>Open Bottom with a rim — ideal for tealight holders and vases.</figcaption>
+    </figure>
+
+    <!-- 6 · SAVE PROJECT -->
+    <h2 id="save"><span class="num">6</span> Save &amp; continue later</h2>
+    <p class="section-intro">You don't have to finish in one sitting. A whole project — the model, all your settings, and any painted zones — can be saved to your computer and reopened any time to keep working.</p>
+
+    <p>The project buttons sit in the top bar of the control panel:</p>
+    <table class="ptable">
+      <tr><th>Button</th><th>What it does</th></tr>
+      <tr><td>💾 Save</td><td>Saves the entire project as a single <code>.edf</code> file on your computer — including the embedded STL, every setting, and all Exclusion Zones.</td></tr>
+      <tr><td>📂 Open</td><td>Opens a previously saved <code>.edf</code> file so you can carry on exactly where you left off.</td></tr>
+      <tr><td>🆕 New</td><td>Clears everything and starts a fresh project.</td></tr>
+    </table>
+
+    <div class="callout note">
+      <span class="ico">💾</span>
+      <div>Everything lives in one <code>.edf</code> file — there's nothing stored on the server. Keep that file and your work is safe; share it and someone else can open the exact same project.</div>
+    </div>
+
+    <h3>Saving</h3>
+    <p>Click <strong>💾 Save</strong>, give the project a name (and an optional note), and download the <code>.edf</code> file. Because the original STL is embedded inside it, the file is fully self-contained.</p>
+
+    <h3>Opening again</h3>
+    <p>Click <strong>📂 Open</strong> and pick your <code>.edf</code> file. A dialog shows the project's details — name, note, original STL, save date and zone count — and gives you two ways to load it:</p>
+    <ul>
+      <li><strong>📁 STL &amp; load</strong> — loads everything including the 3D preview, ready to continue or generate.</li>
+      <li><strong>Params only</strong> — loads just the settings, without the STL preview. Handy for applying the same setup to a different model.</li>
+    </ul>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/save-load.png" alt="save and load project" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>Save your project as an .edf file, then reopen it any time to keep working.</figcaption>
+    </figure>
+
+    <!-- 7 · GENERATE -->
+    <h2 id="generate"><span class="num">7</span> Generate &amp; download</h2>
+    <p class="section-intro">Once everything looks right, it's time to build the final mesh.</p>
+    <ol>
+      <li>Click the blue <strong>◈ Generate</strong> button at the bottom of the control panel.</li>
+      <li>Your job runs on the server. Follow live progress in the <strong>📋 Log</strong> panel and the progress bar. Generation typically takes <strong>30 seconds to 3 minutes</strong> depending on complexity. If several people generate at once, jobs are queued fairly.</li>
+      <li>You can <strong>✖ Cancel</strong> a running job at any time.</li>
+      <li>When it's done, the result appears in the preview and the <strong>⬇️ Download STL</strong> button activates. Click it, give your file a name, and save it.</li>
+    </ol>
+
+    <figure>
+      <img src="https://app.gridify3d.com/static/howto/generate.png" alt="generate" loading="lazy" onerror="this.style.display='none'">
+      <figcaption>Generate, watch the progress in the log, then download your finished STL.</figcaption>
+    </figure>
+
+    <p>The downloaded STL is a watertight, manifold mesh — drop it straight into your slicer (Bambu Studio, PrusaSlicer, Cura, …) and print.</p>
+
+    <div class="hr"></div>
+
+    <!-- TIPS -->
+    <h2 id="tips">Tips &amp; troubleshooting</h2>
+    <table class="ptable">
+      <tr><th>Situation</th><th>What to try</th></tr>
+      <tr><td>Result is too dense / fragile</td><td>Increase Pattern Size, or increase Tube Diameter for stronger rods.</td></tr>
+      <tr><td>Shapes overlap in Surface mode</td><td>Raise Min Point Distance or increase Line Spacing.</td></tr>
+      <tr><td>Pattern wraps oddly</td><td>Adjust the Center Offset so the projection center sits inside the model.</td></tr>
+      <tr><td>Want a solid area</td><td>Paint an Exclusion Zone over it before generating.</td></tr>
+      <tr><td>Open top/bottom looks rough</td><td>Enable "Auto-fill open areas" (Wire Grid) or add a rim (Open Bottom).</td></tr>
+      <tr><td>Generation fails on a complex model</td><td>Try a simpler/cleaner watertight STL, or scale it down slightly. Very large boolean jobs are heavier to compute.</td></tr>
+    </table>
+
+    <div class="callout note">
+      <span class="ico">📬</span>
+      <div>Found a bug or have a feature request? Your feedback during the beta is hugely valuable — get in touch and let me know what you'd like to see.</div>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  <p>Gridify3D — Pattern Wireframe Generator · <a href="https://app.gridify3d.com" target="_blank">Open the app</a></p>
+</footer>
+
+</body>
+</html>
