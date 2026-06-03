@@ -247,7 +247,7 @@ footer a { color: rgba(255,255,255,0.7); }
     <a href="#offset" class="sub">Center Offset</a>
     <a href="#surface">4 · Surface mode</a>
     <a href="#surface-lines" class="sub">Lines &amp; intersections</a>
-    <a href="#surface-punch" class="sub">Punch &amp; Stamp</a>
+    <a href="#surface-punch" class="sub">Punch / Engrave &amp; Stamp</a>
     <a href="#shared">5 · Shared options</a>
     <a href="#zones" class="sub">Exclusion Zones</a>
     <a href="#scale" class="sub">Scale</a>
@@ -310,7 +310,7 @@ footer a { color: rgba(255,255,255,0.7); }
       <div class="mode-card">
         <div class="mc-icon">🥚</div>
         <h4>Surface</h4>
-        <p>Keeps a solid shell and decorates it: punch holes through it or stamp raised shapes onto it, at evenly spaced points.</p>
+        <p>Keeps a solid shell and decorates it: punch holes through it, engrave depressions into it, or stamp raised shapes onto it, at evenly spaced points.</p>
       </div>
     </div>
 
@@ -375,7 +375,7 @@ footer a { color: rgba(255,255,255,0.7); }
 
     <!-- 4 · SURFACE -->
     <h2 id="surface"><span class="num">4</span> Surface mode</h2>
-    <p class="section-intro">Surface mode keeps a solid shell of your model and decorates it. Shapes are placed at evenly spaced points across the surface, and you decide whether they're punched <em>through</em> the wall or stamped <em>onto</em> it.</p>
+    <p class="section-intro">Surface mode keeps a solid shell of your model and decorates it. Shapes are placed at evenly spaced points across the surface, and you decide whether they're punched <em>through</em> the wall, engraved <em>into</em> it, or stamped <em>onto</em> it.</p>
 
     <h3 id="surface-lines">Lines &amp; Intersections</h3>
     <p>This panel defines the grid of points where shapes will be placed.</p>
@@ -392,24 +392,26 @@ footer a { color: rgba(255,255,255,0.7); }
       <figcaption>Use the preview to check intersection placement before generating.</figcaption>
     </figure>
 
-    <h3 id="surface-punch">Punch &amp; Stamp</h3>
-    <p>Here you choose the <strong>shape</strong>, then whether to <strong>punch</strong> or <strong>stamp</strong> it.</p>
+    <h3 id="surface-punch">Punch / Engrave &amp; Stamp</h3>
+    <p>Here you choose the <strong>shape</strong>, then whether to <strong>punch</strong>, <strong>engrave</strong>, or <strong>stamp</strong> it.</p>
     <ul>
       <li><strong>Shapes:</strong> ⚫ Circle · ⭐ Star · ❤️ Heart · 🌸 Flower · 🔵 Dome.</li>
       <li><strong>🕳 Punch</strong> cuts the shape as a hole straight through the surface wall.</li>
+      <li><strong>🔻 Engrave</strong> carves the shape into the solid surface as a depression — the body stays intact.</li>
       <li><strong>🔴 Stamp</strong> raises the shape outward from the surface as a relief.</li>
     </ul>
 
     <table class="ptable">
       <tr><th>Setting</th><th>What it does</th><th>When</th></tr>
       <tr><td>Surface Thickness</td><td>Thickness of the shell wall in mm.</td><td>Punch</td></tr>
+      <tr><td>Engrave Depth</td><td>How deep the shape is carved into the surface.</td><td>Engrave</td></tr>
       <tr><td>Stamp Height</td><td>How far the stamped shape protrudes above the surface.</td><td>Stamp</td></tr>
-      <tr><td>Radius</td><td>Size of each punched/stamped shape.</td><td>Both</td></tr>
+      <tr><td>Radius</td><td>Size of each shape.</td><td>All three</td></tr>
     </table>
 
     <figure>
       <img src="https://app.gridify3d.com/static/howto/punch-stamp.png" alt="punch stamp" onerror="this.style.display='none'">
-      <figcaption>Pick a shape, then punch it through the wall or stamp it as a raised relief.</figcaption>
+      <figcaption>Pick a shape, then punch it through the wall, engrave it into the surface, or stamp it as a raised relief.</figcaption>
     </figure>
 
     <div class="callout tip">
@@ -444,13 +446,18 @@ footer a { color: rgba(255,255,255,0.7); }
       <figcaption>Per-axis scaling with optional axis lock — live in the preview.</figcaption>
     </figure>
 
-    <h3 id="openbottom">⬇️ Open Bottom</h3>
+    <h3 id="openbottom">⬇️ Open Bottom / ✂️ Cut Bottom</h3>
     <p>For objects that need a flat, open base — like a tealight holder or vase — enable <strong>Open Bottom</strong>. It cuts the model at a height you choose and can add a rounded rim to tidy the cut edge.</p>
     <table class="ptable">
       <tr><th>Setting</th><th>What it does</th></tr>
       <tr><td>✂️ Cut Height</td><td>How far up from the lowest point the model is cut open.</td></tr>
-      <tr><td>⭕ Add Rim</td><td>Connects the cut edges with a smooth D-profile rim. In Wire Grid mode the rim size is a factor of the tube radius; in Surface mode it's set directly in mm.</td></tr>
+      <tr><td>⭕ Add Rim</td><td>Connects the cut edges with a smooth D-profile rim. In Wire Grid mode the rim size is a factor of the tube radius; in Surface mode (Punch) it's set directly in mm.</td></tr>
     </table>
+
+    <div class="callout note">
+      <span class="ico">✂️</span>
+      <div>In <strong>Engrave</strong> and <strong>Stamp</strong> mode this feature is called <strong>Cut Bottom</strong> — it simply slices the bottom off the solid model at the chosen height. The <strong>Rim option is not available</strong> in these modes, since the model stays solid and doesn't need an edge rim.</div>
+    </div>
 
     <div class="callout tip">
       <span class="ico">🕯️</span>
