@@ -338,6 +338,10 @@ section { padding: 80px 32px; }
 .cta-section .section-sub { color: rgba(255,255,255,0.5); margin: 0 auto 40px; }
 .cta-section .btn-secondary { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: white; }
 .cta-section .btn-secondary:hover { background: rgba(255,255,255,0.14); }
+.cta-section input::placeholder,
+.cta-section textarea::placeholder { color: rgba(255,255,255,0.35); }
+.cta-section input:focus,
+.cta-section textarea:focus { border-color: var(--blue); background: rgba(255,255,255,0.12); }
 
 /* ── FOOTER ── */
 footer {
@@ -393,9 +397,8 @@ footer p { font-size: 13px; color: rgba(255,255,255,0.3); }
   <h1>Turn any 3D model into a<br><em>wireframe masterpiece</em></h1>
   <p>Upload your STL, choose a pattern, generate a printable pattern-frame or surface structure — in minutes.</p>
   <div class="hero-btns">
-    <a class="btn-primary" href="https://app.gridify3d.com" target="_blank">
-      Launch Gridify3D
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg>
+    <a class="btn-primary" href="#request">
+      🙋 Request Beta Access
     </a>
     <a class="btn-secondary" href="#how">See how it works</a>
   </div>
@@ -602,17 +605,21 @@ footer p { font-size: 13px; color: rgba(255,255,255,0.3); }
 </section>
 
 <!-- CTA -->
-<section class="cta-section">
+<section class="cta-section" id="request">
   <div class="section-label">Ready?</div>
-  <div class="section-title" style="color:white;">Start creating<br>your first wireframe</div>
-  <div class="section-sub">No installation needed. Just open the app, upload your model, and go.</div>
-  <div class="hero-btns">
-    <a class="btn-primary" href="https://app.gridify3d.com" target="_blank">
-      Launch Gridify3D
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg>
-    </a>
-    <a class="btn-secondary" href="#how">How it works</a>
-  </div>
+  <div class="section-title" style="color:white;">Request beta access</div>
+  <div class="section-sub">Gridify3D is currently in early beta with a small group of testers. Leave your details and we'll get you set up.</div>
+  <form method="POST" action="https://app.gridify3d.com/interest" style="max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:12px;text-align:left;">
+    <input type="text" name="name" placeholder="Your name" required
+      style="padding:14px 18px;border-radius:12px;border:0.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:white;font-size:16px;font-family:inherit;outline:none;">
+    <input type="email" name="email" placeholder="Your email" required
+      style="padding:14px 18px;border-radius:12px;border:0.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:white;font-size:16px;font-family:inherit;outline:none;">
+    <textarea name="message" placeholder="What would you like to try? (optional)" rows="3"
+      style="padding:14px 18px;border-radius:12px;border:0.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.08);color:white;font-size:16px;font-family:inherit;outline:none;resize:vertical;"></textarea>
+    <button type="submit" class="btn-primary" style="border:none;cursor:pointer;justify-content:center;margin-top:4px;">
+      🙋 Send Request
+    </button>
+  </form>
 </section>
 
 <!-- FOOTER -->
