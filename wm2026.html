@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WM 2026 Tippspiel Simulator</title>
+<style>
+:root {
+  --bg: #0b1222; --bg2: #131d33; --bg3: #1a2744; --bg4: #22325a;
+  --gold: #d4a843; --gold2: #b8922e; --green: #2ecc71; --red: #e74c3c;
+  --txt: #e8eaf0; --txt2: #9aa3b8; --txt3: #5d6a85;
+  --border: #1e2d4a; --radius: 8px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; }
+button { cursor: pointer; font-family: inherit; }
+input[type=number] { font-family: inherit; }
+
+.header { background: linear-gradient(135deg, var(--bg2), var(--bg3)); border-bottom: 2px solid var(--gold); padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.header h1 { font-size: 1.3em; color: var(--gold); font-weight: 700; letter-spacing: 0.5px; }
+.header h1 span { color: var(--txt2); font-weight: 400; font-size: 0.75em; }
+
+.tabs { display: flex; gap: 2px; background: var(--bg2); padding: 6px 12px; overflow-x: auto; border-bottom: 1px solid var(--border); flex-wrap: nowrap; }
+.tab { padding: 8px 14px; border: none; background: transparent; color: var(--txt2); font-size: 0.85em; font-weight: 600; border-radius: var(--radius) var(--radius) 0 0; white-space: nowrap; transition: all .15s; }
+.tab:hover { color: var(--txt); background: var(--bg3); }
+.tab.active { color: var(--gold); background: var(--bg3); border-bottom: 2px solid var(--gold); }
+
+.main { max-width: 900px; margin: 0 auto; padding: 16px; }
+
+/* Parameter Panel */
+.params-toggle { background: var(--bg3); border: 1px solid var(--border); color: var(--gold); padding: 8px 16px; border-radius: var(--radius); font-size: 0.85em; width: 100%; text-align: left; margin-bottom: 12px; }
+.params-toggle:hover { background: var(--bg4); }
+.params-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; display: none; }
+.params-panel.open { display: block; }
+.params-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.param-item { display: flex; flex-direction: column; gap: 4px; }
+.param-item label { font-size: 0.75em; color: var(--txt2); text-transform: uppercase; letter-spacing: 0.5px; }
+.param-item input { background: var(--bg3); border: 1px solid var(--border); color: var(--txt); padding: 6px 10px; border-radius: 4px; font-size: 0.9em; width: 100%; }
+.param-item input:focus { outline: none; border-color: var(--gold); }
+
+/* Group View */
+.group-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.group-header h2 { font-size: 1.2em; color: var(--gold); }
+.group-header .teams-list { color: var(--txt2); font-size: 0.85em; }
+
+.matchday { margin-bottom: 20px; }
+.matchday h3 { font-size: 0.8em; color: var(--txt3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+
+.match-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 8px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+.match-team { display: flex; align-items: center; gap: 8px; font-size: 0.9em; }
+.match-team.away { justify-content: flex-end; text-align: right; }
+.match-team .flag { font-size: 1.3em; }
+.match-center { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 120px; }
+.predicted { font-size: 0.7em; color: var(--txt3); }
+.score-inputs { display: flex; align-items: center; gap: 4px; }
+.score-inputs input { width: 36px; height: 32px; text-align: center; background: var(--bg3); border: 1px solid var(--border); color: var(--txt); border-radius: 4px; font-size: 1em; font-weight: 700; }
+.score-inputs input:focus { outline: none; border-color: var(--gold); }
+.score-inputs .sep { color: var(--txt3); font-weight: 700; }
+.score-inputs input.has-value { border-color: var(--green); background: rgba(46,204,113,0.1); }
+.match-card.played { border-color: var(--green); border-left: 3px solid var(--green); }
+.prob-bar { font-size: 0.65em; color: var(--txt3); margin-top: 2px; }
+
+/* Group Table */
+.group-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.85em; }
+.group-table th { text-align: left; padding: 8px 10px; color: var(--txt2); font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid var(--border); }
+.group-table th.num { text-align: center; }
+.group-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.group-table td.num { text-align: center; }
+.group-table tr.q1 td { background: rgba(46,204,113,0.08); }
+.group-table tr.q2 td { background: rgba(46,204,113,0.04); }
+.group-table tr.q3 td { background: rgba(212,168,67,0.06); }
+.group-table .team-cell { display: flex; align-items: center; gap: 8px; }
+.group-table .pos { color: var(--txt3); font-weight: 700; width: 18px; }
+
+/* Overview */
+.overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.overview-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+.overview-card h4 { color: var(--gold); font-size: 0.85em; margin-bottom: 8px; }
+.overview-team { display: flex; align-items: center; gap: 6px; font-size: 0.85em; padding: 3px 0; }
+.overview-team.first { font-weight: 700; color: var(--green); }
+.overview-team.second { color: var(--txt); }
+.overview-team.third { color: var(--txt2); }
+.overview-team.fourth { color: var(--txt3); }
+.overview-elo { margin-left: auto; font-size: 0.75em; color: var(--txt3); }
+
+/* Knockout */
+.ko-section { margin-bottom: 24px; }
+.ko-section h3 { color: var(--gold); font-size: 0.95em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.ko-match { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; font-size: 0.85em; }
+.ko-match .vs { color: var(--txt3); margin: 0 4px; }
+.ko-match .ko-score { margin-left: auto; display: flex; gap: 4px; }
+.ko-match .ko-score input { width: 32px; height: 28px; text-align: center; background: var(--bg3); border: 1px solid var(--border); color: var(--txt); border-radius: 4px; font-size: 0.9em; }
+.ko-match .ko-score input:focus { outline: none; border-color: var(--gold); }
+
+/* Elo Editor */
+.elo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
+.elo-item { display: flex; align-items: center; gap: 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; font-size: 0.85em; }
+.elo-item .flag { font-size: 1.1em; }
+.elo-item input { width: 60px; background: var(--bg3); border: 1px solid var(--border); color: var(--txt); padding: 4px 6px; border-radius: 4px; text-align: center; font-size: 0.85em; margin-left: auto; }
+.elo-item input:focus { outline: none; border-color: var(--gold); }
+
+/* Buttons */
+.btn { padding: 8px 16px; border: none; border-radius: var(--radius); font-size: 0.85em; font-weight: 600; transition: all .15s; }
+.btn-gold { background: var(--gold); color: var(--bg); }
+.btn-gold:hover { background: var(--gold2); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--txt2); }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+.btn-red { background: var(--red); color: white; }
+.btn-red:hover { background: #c0392b; }
+
+.actions { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
+
+.export-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; font-family: monospace; font-size: 0.8em; color: var(--txt2); white-space: pre-wrap; max-height: 400px; overflow-y: auto; margin-top: 12px; }
+
+.legend { display: flex; gap: 16px; margin-top: 8px; font-size: 0.7em; color: var(--txt3); flex-wrap: wrap; }
+.legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.legend .l1::before { background: rgba(46,204,113,0.3); }
+.legend .l2::before { background: rgba(46,204,113,0.15); }
+.legend .l3::before { background: rgba(212,168,67,0.2); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚽ WM 2026 Tippspiel Simulator <span>Elo-Poisson-Modell</span></h1>
+</div>
+
+<div class="tabs" id="tabs"></div>
+<div class="main" id="main"></div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const TEAMS = [
+  // Gruppe A
+  {id:0,  name:'Mexiko',          flag:'🇲🇽', elo:1830, base:1830},
+  {id:1,  name:'Südafrika',       flag:'🇿🇦', elo:1580, base:1580},
+  {id:2,  name:'Südkorea',        flag:'🇰🇷', elo:1800, base:1800},
+  {id:3,  name:'Tschechien',      flag:'🇨🇿', elo:1650, base:1650},
+  // Gruppe B
+  {id:4,  name:'Kanada',          flag:'🇨🇦', elo:1680, base:1680},
+  {id:5,  name:'Bosnien-Herz.',   flag:'🇧🇦', elo:1630, base:1630},
+  {id:6,  name:'Katar',           flag:'🇶🇦', elo:1640, base:1640},
+  {id:7,  name:'Schweiz',         flag:'🇨🇭', elo:1850, base:1850},
+  // Gruppe C
+  {id:8,  name:'Brasilien',       flag:'🇧🇷', elo:2020, base:2020},
+  {id:9,  name:'Marokko',         flag:'🇲🇦', elo:1860, base:1860},
+  {id:10, name:'Haiti',           flag:'🇭🇹', elo:1450, base:1450},
+  {id:11, name:'Schottland',      flag:'🏴󠁧󠁢󠁳󠁣󠁴󠁿', elo:1690, base:1690},
+  // Gruppe D
+  {id:12, name:'USA',             flag:'🇺🇸', elo:1840, base:1840},
+  {id:13, name:'Paraguay',        flag:'🇵🇾', elo:1680, base:1680},
+  {id:14, name:'Australien',      flag:'🇦🇺', elo:1760, base:1760},
+  {id:15, name:'Türkei',          flag:'🇹🇷', elo:1790, base:1790},
+  // Gruppe E
+  {id:16, name:'Deutschland',     flag:'🇩🇪', elo:1980, base:1980},
+  {id:17, name:'Curaçao',         flag:'🇨🇼', elo:1400, base:1400},
+  {id:18, name:'Elfenbeinküste',  flag:'🇨🇮', elo:1730, base:1730},
+  {id:19, name:'Ecuador',         flag:'🇪🇨', elo:1780, base:1780},
+  // Gruppe F
+  {id:20, name:'Niederlande',     flag:'🇳🇱', elo:1970, base:1970},
+  {id:21, name:'Japan',           flag:'🇯🇵', elo:1870, base:1870},
+  {id:22, name:'Schweden',        flag:'🇸🇪', elo:1710, base:1710},
+  {id:23, name:'Tunesien',        flag:'🇹🇳', elo:1700, base:1700},
+  // Gruppe G
+  {id:24, name:'Belgien',         flag:'🇧🇪', elo:1890, base:1890},
+  {id:25, name:'Ägypten',         flag:'🇪🇬', elo:1750, base:1750},
+  {id:26, name:'Iran',            flag:'🇮🇷', elo:1740, base:1740},
+  {id:27, name:'Neuseeland',      flag:'🇳🇿', elo:1530, base:1530},
+  // Gruppe H
+  {id:28, name:'Spanien',         flag:'🇪🇸', elo:2120, base:2120},
+  {id:29, name:'Kap Verde',       flag:'🇨🇻', elo:1500, base:1500},
+  {id:30, name:'Saudi-Arabien',   flag:'🇸🇦', elo:1660, base:1660},
+  {id:31, name:'Uruguay',         flag:'🇺🇾', elo:1920, base:1920},
+  // Gruppe I
+  {id:32, name:'Frankreich',      flag:'🇫🇷', elo:2100, base:2100},
+  {id:33, name:'Senegal',         flag:'🇸🇳', elo:1810, base:1810},
+  {id:34, name:'Irak',            flag:'🇮🇶', elo:1570, base:1570},
+  {id:35, name:'Norwegen',        flag:'🇳🇴', elo:1740, base:1740},
+  // Gruppe J
+  {id:36, name:'Argentinien',     flag:'🇦🇷', elo:2140, base:2140},
+  {id:37, name:'Algerien',        flag:'🇩🇿', elo:1720, base:1720},
+  {id:38, name:'Österreich',      flag:'🇦🇹', elo:1750, base:1750},
+  {id:39, name:'Jordanien',       flag:'🇯🇴', elo:1550, base:1550},
+  // Gruppe K
+  {id:40, name:'Portugal',        flag:'🇵🇹', elo:2000, base:2000},
+  {id:41, name:'DR Kongo',        flag:'🇨🇩', elo:1600, base:1600},
+  {id:42, name:'Usbekistan',      flag:'🇺🇿', elo:1590, base:1590},
+  {id:43, name:'Kolumbien',       flag:'🇨🇴', elo:1930, base:1930},
+  // Gruppe L
+  {id:44, name:'England',         flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', elo:2050, base:2050},
+  {id:45, name:'Kroatien',        flag:'🇭🇷', elo:1910, base:1910},
+  {id:46, name:'Ghana',           flag:'🇬🇭', elo:1670, base:1670},
+  {id:47, name:'Panama',          flag:'🇵🇦', elo:1620, base:1620},
+];
+
+const GROUP_NAMES = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+const GROUPS = [
+  [0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15],
+  [16,17,18,19],[20,21,22,23],[24,25,26,27],[28,29,30,31],
+  [32,33,34,35],[36,37,38,39],[40,41,42,43],[44,45,46,47]
+];
+
+// Host nations get Elo boost (configurable)
+const HOST_IDS = [0, 4, 12]; // Mexiko, Kanada, USA
+
+// Match schedule per group: [homeIdx, awayIdx] within group
+const MATCHDAYS = [
+  [[0,1],[2,3]], // MD1: T1vT2, T3vT4
+  [[0,2],[1,3]], // MD2: T1vT3, T2vT4
+  [[0,3],[1,2]]  // MD3: T1vT4, T2vT3
+];
+
+// Fixed knockout pairings (Sechzehntelfinale): 1st vs 2nd mappings
+// Format: [homeGroup1st, awayGroup2nd] or null for 3rd-place slots
+const SF_FIXED = [
+  {home:'C', homePos:1, away:'F', awayPos:2, label:'SF2'},
+  {home:'F', homePos:1, away:'C', awayPos:2, label:'SF4'},
+  {home:'H', homePos:1, away:'J', awayPos:2, label:'SF11'},
+  {home:'D', homePos:1, away:'G', awayPos:2, label:'SF14'},
+  {home:'J', homePos:1, away:'H', awayPos:2, label:'SF15'},
+  {home:'K', homePos:1, away:'L', awayPos:2, label:'SF12 (2.K vs 2.L)'},
+  {home:'A', homePos:2, away:'B', awayPos:2, label:'SF1 (2.A vs 2.B)'},
+  {home:'E', homePos:2, away:'I', awayPos:2, label:'SF5 (2.E vs 2.I)'},
+];
+
+// Achtelfinale known clashes of group winners
+const AF_CLASHES = [
+  {g1:'E', g2:'I', label:'1.E vs 1.I (pot. DE-FR)'},
+  {g1:'D', g2:'G', label:'1.D vs 1.G (pot. USA-BEL)'},
+  {g1:'A', g2:'L', label:'1.A vs 1.L (pot. MEX-ENG)'},
+  {g1:'B', g2:'K', label:'1.B vs 1.K (pot. SUI-POR)'},
+];
+
+// ============================================================
+// ENGINE
+// ============================================================
+let params = {
+  baseGoals: 1.30,
+  eloFactor: 400,
+  homeBoost: 0,    // Neutral venue (WM = no home), but configurable
+  hostBoost: 80,   // Extra Elo for host nations
+  kFactor: 40,
+  drawWeight: 0.35 // WM draw tendency factor
+};
+
+function factorial(n) {
+  let f = 1; for (let i = 2; i <= n; i++) f *= i; return f;
+}
+
+function poissonPmf(k, lam) {
+  if (lam <= 0) return k === 0 ? 1 : 0;
+  return Math.pow(lam, k) * Math.exp(-lam) / factorial(k);
+}
+
+function getEffectiveElo(teamId) {
+  let elo = TEAMS[teamId].elo;
+  if (HOST_IDS.includes(teamId)) elo += params.hostBoost;
+  return elo;
+}
+
+function predictMatch(idA, idB) {
+  const eloA = getEffectiveElo(idA);
+  const eloB = getEffectiveElo(idB);
+  const diff = (eloA - eloB + params.homeBoost) / params.eloFactor;
+  const lamA = Math.max(0.15, params.baseGoals + diff / 2);
+  const lamB = Math.max(0.15, params.baseGoals - diff / 2);
+
+  let bestProb = 0, bestA = 0, bestB = 0;
+  let pWin = 0, pDraw = 0, pLoss = 0;
+  for (let a = 0; a <= 7; a++) {
+    for (let b = 0; b <= 7; b++) {
+      const p = poissonPmf(a, lamA) * poissonPmf(b, lamB);
+      if (a > b) pWin += p;
+      else if (a === b) pDraw += p;
+      else pLoss += p;
+      if (p > bestProb) { bestProb = p; bestA = a; bestB = b; }
+    }
+  }
+  return { goalsA: bestA, goalsB: bestB, lamA, lamB, prob: bestProb,
+           pWin: pWin, pDraw: pDraw, pLoss: pLoss };
+}
+
+function updateElo(idA, idB, goalsA, goalsB) {
+  const eA = TEAMS[idA].elo, eB = TEAMS[idB].elo;
+  const exA = 1 / (1 + Math.pow(10, (eB - eA) / 400));
+  const actual = goalsA > goalsB ? 1 : (goalsA === goalsB ? 0.5 : 0);
+  const delta = params.kFactor * (actual - exA);
+  TEAMS[idA].elo = Math.round(eA + delta);
+  TEAMS[idB].elo = Math.round(eB - delta);
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let results = {}; // key: "gX_mY" => {goalsA: n, goalsB: n}
+let koResults = {}; // key: "ko_X" => {goalsA, goalsB}
+let activeTab = 'overview';
+let paramsOpen = false;
+let exportOpen = false;
+
+function saveState() {
+  try {
+    const state = {
+      results, koResults, params,
+      elos: TEAMS.map(t => t.elo)
+    };
+    localStorage.setItem('wm2026_tippspiel', JSON.stringify(state));
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem('wm2026_tippspiel'));
+    if (s) {
+      if (s.results) results = s.results;
+      if (s.koResults) koResults = s.koResults;
+      if (s.params) Object.assign(params, s.params);
+      if (s.elos) s.elos.forEach((e, i) => { TEAMS[i].elo = e; });
+    }
+  } catch(e) {}
+}
+
+// ============================================================
+// GROUP TABLE CALCULATION
+// ============================================================
+function calcGroupTable(gi) {
+  const tids = GROUPS[gi];
+  const table = tids.map(id => ({
+    id, pts:0, gf:0, ga:0, gd:0, w:0, d:0, l:0, played:0
+  }));
+  const lookup = {};
+  tids.forEach((id, i) => lookup[id] = i);
+
+  // Count played results
+  for (let md = 0; md < 3; md++) {
+    for (let mi = 0; mi < 2; mi++) {
+      const key = `g${gi}_m${md*2+mi}`;
+      const r = results[key];
+      const [hi, ai] = MATCHDAYS[md][mi];
+      const hid = tids[hi], aid = tids[ai];
+      if (r && r.goalsA !== '' && r.goalsB !== '') {
+        const gA = parseInt(r.goalsA), gB = parseInt(r.goalsB);
+        if (isNaN(gA) || isNaN(gB)) continue;
+        const h = table[lookup[hid]], a = table[lookup[aid]];
+        h.gf += gA; h.ga += gB; h.played++;
+        a.gf += gB; a.ga += gA; a.played++;
+        if (gA > gB) { h.w++; h.pts += 3; a.l++; }
+        else if (gA === gB) { h.d++; h.pts += 1; a.d++; a.pts += 1; }
+        else { a.w++; a.pts += 3; h.l++; }
+      }
+    }
+  }
+
+  // For unplayed matches, use predictions to fill projected table
+  for (let md = 0; md < 3; md++) {
+    for (let mi = 0; mi < 2; mi++) {
+      const key = `g${gi}_m${md*2+mi}`;
+      const r = results[key];
+      const [hi, ai] = MATCHDAYS[md][mi];
+      const hid = tids[hi], aid = tids[ai];
+      if (!r || r.goalsA === '' || r.goalsB === '') {
+        const pred = predictMatch(hid, aid);
+        const h = table[lookup[hid]], a = table[lookup[aid]];
+        h.gf += pred.goalsA; h.ga += pred.goalsB;
+        a.gf += pred.goalsB; a.ga += pred.goalsA;
+        if (pred.goalsA > pred.goalsB) { h.w++; h.pts += 3; a.l++; }
+        else if (pred.goalsA === pred.goalsB) { h.d++; h.pts += 1; a.d++; a.pts += 1; }
+        else { a.w++; a.pts += 3; h.l++; }
+      }
+    }
+  }
+
+  table.forEach(t => t.gd = t.gf - t.ga);
+  table.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+  return table;
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  renderTabs();
+  const main = document.getElementById('main');
+
+  if (activeTab === 'overview') { main.innerHTML = renderOverview(); }
+  else if (activeTab === 'knockout') { main.innerHTML = renderKnockout(); }
+  else if (activeTab === 'elo') { main.innerHTML = renderEloEditor(); }
+  else if (activeTab === 'export') { main.innerHTML = renderExport(); }
+  else {
+    const gi = GROUP_NAMES.indexOf(activeTab);
+    if (gi >= 0) main.innerHTML = renderGroup(gi);
+  }
+
+  bindEvents();
+  saveState();
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('tabs');
+  const items = [
+    {id:'overview', label:'📊 Übersicht'},
+    ...GROUP_NAMES.map(g => ({id:g, label:`Gr. ${g}`})),
+    {id:'knockout', label:'🏆 K.o.-Phase'},
+    {id:'elo', label:'⚙️ Elo-Werte'},
+    {id:'export', label:'📋 Export'},
+  ];
+  tabs.innerHTML = items.map(t =>
+    `<button class="tab ${activeTab===t.id?'active':''}" data-tab="${t.id}">${t.label}</button>`
+  ).join('');
+}
+
+function renderGroup(gi) {
+  const tids = GROUPS[gi];
+  const gn = GROUP_NAMES[gi];
+  let html = '';
+
+  // Params toggle
+  html += `<button class="params-toggle" id="ptoggle">⚙ Parameter anpassen ${paramsOpen?'▲':'▼'}</button>`;
+  html += `<div class="params-panel ${paramsOpen?'open':''}" id="ppanel">${renderParams()}</div>`;
+
+  // Group header
+  html += `<div class="group-header"><h2>Gruppe ${gn}</h2>`;
+  html += `<span class="teams-list">${tids.map(id => TEAMS[id].flag+' '+TEAMS[id].name).join(' · ')}</span></div>`;
+
+  // Matchdays
+  for (let md = 0; md < 3; md++) {
+    html += `<div class="matchday"><h3>Spieltag ${md+1}</h3>`;
+    for (let mi = 0; mi < 2; mi++) {
+      const [hi, ai] = MATCHDAYS[md][mi];
+      const hid = tids[hi], aid = tids[ai];
+      const key = `g${gi}_m${md*2+mi}`;
+      const r = results[key] || {goalsA:'', goalsB:''};
+      const played = r.goalsA !== '' && r.goalsB !== '';
+      const pred = predictMatch(hid, aid);
+
+      html += `<div class="match-card ${played?'played':''}">`;
+      html += `<div class="match-team home"><span class="flag">${TEAMS[hid].flag}</span><span>${TEAMS[hid].name}</span></div>`;
+      html += `<div class="match-center">`;
+      html += `<div class="predicted">Prognose: ${pred.goalsA}:${pred.goalsB} (${(pred.prob*100).toFixed(0)}%)</div>`;
+      html += `<div class="score-inputs">`;
+      html += `<input type="number" min="0" max="20" data-key="${key}" data-side="A" value="${r.goalsA}" class="${r.goalsA!==''?'has-value':''}">`;
+      html += `<span class="sep">:</span>`;
+      html += `<input type="number" min="0" max="20" data-key="${key}" data-side="B" value="${r.goalsB}" class="${r.goalsB!==''?'has-value':''}">`;
+      html += `</div>`;
+      html += `<div class="prob-bar">${(pred.pWin*100).toFixed(0)}% · ${(pred.pDraw*100).toFixed(0)}% · ${(pred.pLoss*100).toFixed(0)}%</div>`;
+      html += `</div>`;
+      html += `<div class="match-team away"><span>${TEAMS[aid].name}</span><span class="flag">${TEAMS[aid].flag}</span></div>`;
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Actions
+  html += `<div class="actions">`;
+  html += `<button class="btn btn-gold" id="fillPred" data-gi="${gi}">Prognosen eintragen</button>`;
+  html += `<button class="btn btn-outline" id="clearGroup" data-gi="${gi}">Resultate löschen</button>`;
+  html += `</div>`;
+
+  // Table
+  const table = calcGroupTable(gi);
+  html += renderTable(table, gi);
+
+  return html;
+}
+
+function renderTable(table, gi) {
+  const anyPlayed = table.some(t => t.played > 0);
+  let html = `<table class="group-table"><thead><tr>`;
+  html += `<th>#</th><th>Team</th><th class="num">Sp</th><th class="num">S</th><th class="num">U</th><th class="num">N</th><th class="num">T</th><th class="num">TD</th><th class="num">Pkt</th>`;
+  html += `</tr></thead><tbody>`;
+  table.forEach((t, i) => {
+    const cls = i === 0 ? 'q1' : i === 1 ? 'q2' : i === 2 ? 'q3' : '';
+    html += `<tr class="${cls}"><td class="num"><span class="pos">${i+1}</span></td>`;
+    html += `<td><div class="team-cell"><span class="flag">${TEAMS[t.id].flag}</span>${TEAMS[t.id].name} <span style="color:var(--txt3);font-size:0.8em">(${TEAMS[t.id].elo})</span></div></td>`;
+    html += `<td class="num">3</td><td class="num">${t.w}</td><td class="num">${t.d}</td><td class="num">${t.l}</td>`;
+    html += `<td class="num">${t.gf}:${t.ga}</td><td class="num">${t.gd>0?'+':''}${t.gd}</td>`;
+    html += `<td class="num" style="font-weight:700">${t.pts}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  html += `<div class="legend"><span class="l1">Gruppensieger (Sechzehntelfinale)</span><span class="l2">Gruppenzweiter (Sechzehntelfinale)</span><span class="l3">Möglicher Dritter (bei Top 8)</span></div>`;
+  return html;
+}
+
+function renderParams() {
+  const fields = [
+    {key:'baseGoals', label:'Ø Tore/Team', step:0.05, min:0.5, max:2.5},
+    {key:'eloFactor', label:'Elo-Faktor (Skalierung)', step:10, min:100, max:1000},
+    {key:'hostBoost', label:'Gastgeber-Bonus (Elo)', step:10, min:0, max:200},
+    {key:'homeBoost', label:'Erstgenannt-Bonus (Elo)', step:5, min:0, max:100},
+    {key:'kFactor', label:'K-Faktor (Elo-Update)', step:5, min:10, max:100},
+  ];
+  let html = `<div class="params-grid">`;
+  fields.forEach(f => {
+    html += `<div class="param-item"><label>${f.label}</label>`;
+    html += `<input type="number" step="${f.step}" min="${f.min}" max="${f.max}" value="${params[f.key]}" data-param="${f.key}"></div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function renderOverview() {
+  let html = `<h2 style="color:var(--gold);margin-bottom:16px">Gruppenübersicht — Prognostizierte Tabellen</h2>`;
+  html += `<div class="overview-grid">`;
+  for (let gi = 0; gi < 12; gi++) {
+    const table = calcGroupTable(gi);
+    html += `<div class="overview-card"><h4>Gruppe ${GROUP_NAMES[gi]}</h4>`;
+    table.forEach((t, i) => {
+      const cls = i === 0 ? 'first' : i === 1 ? 'second' : i === 2 ? 'third' : 'fourth';
+      html += `<div class="overview-team ${cls}"><span>${i+1}.</span><span class="flag" style="font-size:1em">${TEAMS[t.id].flag}</span>${TEAMS[t.id].name}<span class="overview-elo">${t.pts}P ${t.gd>0?'+':''}${t.gd}</span></div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  // Summary
+  html += `<h2 style="color:var(--gold);margin:24px 0 12px">Prognostizierte Gruppensieger</h2>`;
+  html += `<div style="display:flex;flex-wrap:wrap;gap:8px">`;
+  for (let gi = 0; gi < 12; gi++) {
+    const winner = calcGroupTable(gi)[0];
+    html += `<div style="background:var(--bg2);border:1px solid var(--green);border-radius:var(--radius);padding:8px 14px;font-size:0.9em">`;
+    html += `<span style="color:var(--txt3)">Gr.${GROUP_NAMES[gi]}:</span> ${TEAMS[winner.id].flag} <strong>${TEAMS[winner.id].name}</strong></div>`;
+  }
+  html += `</div>`;
+
+  return html;
+}
+
+function renderKnockout() {
+  let html = `<h2 style="color:var(--gold);margin-bottom:16px">K.o.-Phase — Turnierbaum</h2>`;
+  html += `<p style="color:var(--txt2);font-size:0.85em;margin-bottom:16px">Basierend auf den aktuellen/prognostizierten Gruppenresultaten. Fixe Paarungen gemäss FIFA-Turnierbaum.</p>`;
+
+  // Sechzehntelfinale - key matchups
+  html += `<div class="ko-section"><h3>Sechzehntelfinale — Fixe Paarungen (1. vs 2.)</h3>`;
+  SF_FIXED.forEach(sf => {
+    const gi1 = GROUP_NAMES.indexOf(sf.home);
+    const gi2 = GROUP_NAMES.indexOf(sf.away);
+    const t1 = calcGroupTable(gi1);
+    const t2 = calcGroupTable(gi2);
+    const team1 = TEAMS[t1[sf.homePos-1].id];
+    const team2 = TEAMS[t2[sf.awayPos-1].id];
+    const pred = predictMatch(team1.id, team2.id);
+    html += `<div class="ko-match">`;
+    html += `<span class="flag">${team1.flag}</span> ${team1.name}`;
+    html += `<span class="vs">vs</span>`;
+    html += `<span class="flag">${team2.flag}</span> ${team2.name}`;
+    html += `<span style="margin-left:auto;color:var(--txt3);font-size:0.8em">Prognose: ${pred.goalsA}:${pred.goalsB}</span>`;
+    html += `</div>`;
+  });
+  html += `</div>`;
+
+  // Achtelfinale clashes
+  html += `<div class="ko-section"><h3>Achtelfinale — Gruppensieger-Duelle</h3>`;
+  html += `<p style="color:var(--txt3);font-size:0.8em;margin-bottom:8px">Gemäss Turnierbaum treffen folgende Gruppensieger aufeinander:</p>`;
+  AF_CLASHES.forEach(af => {
+    const gi1 = GROUP_NAMES.indexOf(af.g1);
+    const gi2 = GROUP_NAMES.indexOf(af.g2);
+    const team1 = TEAMS[calcGroupTable(gi1)[0].id];
+    const team2 = TEAMS[calcGroupTable(gi2)[0].id];
+    const pred = predictMatch(team1.id, team2.id);
+    html += `<div class="ko-match">`;
+    html += `<span class="flag">${team1.flag}</span> <strong>${team1.name}</strong>`;
+    html += `<span class="vs">vs</span>`;
+    html += `<span class="flag">${team2.flag}</span> <strong>${team2.name}</strong>`;
+    html += `<span style="margin-left:auto;color:var(--txt3);font-size:0.8em">Prognose: ${pred.goalsA}:${pred.goalsB}</span>`;
+    html += `</div>`;
+  });
+  html += `</div>`;
+
+  // Halbfinale projected
+  html += `<div class="ko-section"><h3>Halbfinale — Projektion (basierend auf Seeds)</h3>`;
+  html += `<p style="color:var(--txt3);font-size:0.8em;margin-bottom:8px">Die Top-4-Seeds (Spanien, Argentinien, Frankreich, England) können sich frühestens im Halbfinale treffen:</p>`;
+
+  // HF1: left bracket (groups A-F side) — includes E1 vs I1 winner
+  // HF2: right bracket (groups G-L side) — includes H1 vs J1 winner
+  const hfPairs = [
+    {label:'HF1 — Dallas, 14. Juli', sides:['E/I-Sieger','A/L-Sieger']},
+    {label:'HF2 — Atlanta, 15. Juli', sides:['H/J-Sieger','D/G-Sieger / B/K-Sieger']},
+  ];
+  // Simplified: project based on group winners
+  const eiWinner = predictKoWinner('E','I');
+  const alWinner = predictKoWinner('A','L');
+  const hjWinner = predictKoWinner('H','J');
+  const bkWinner = predictKoWinner('B','K');
+
+  const hf1pred = predictMatch(eiWinner.id, alWinner.id);
+  html += `<div class="ko-match" style="border-color:var(--gold)">`;
+  html += `<span class="flag">${eiWinner.flag}</span> <strong>${eiWinner.name}</strong>`;
+  html += `<span class="vs">vs</span>`;
+  html += `<span class="flag">${alWinner.flag}</span> <strong>${alWinner.name}</strong>`;
+  html += `<span style="margin-left:auto;color:var(--gold);font-size:0.8em">HF1 Dallas — ${hf1pred.goalsA}:${hf1pred.goalsB}</span>`;
+  html += `</div>`;
+
+  const hf2pred = predictMatch(hjWinner.id, bkWinner.id);
+  html += `<div class="ko-match" style="border-color:var(--gold)">`;
+  html += `<span class="flag">${hjWinner.flag}</span> <strong>${hjWinner.name}</strong>`;
+  html += `<span class="vs">vs</span>`;
+  html += `<span class="flag">${bkWinner.flag}</span> <strong>${bkWinner.name}</strong>`;
+  html += `<span style="margin-left:auto;color:var(--gold);font-size:0.8em">HF2 Atlanta — ${hf2pred.goalsA}:${hf2pred.goalsB}</span>`;
+  html += `</div>`;
+
+  html += `</div>`;
+
+  // Finale
+  const finalist1 = hf1pred.goalsA >= hf1pred.goalsB ? eiWinner : alWinner;
+  const finalist2 = hf2pred.goalsA >= hf2pred.goalsB ? hjWinner : bkWinner;
+  const finalPred = predictMatch(finalist1.id, finalist2.id);
+
+  html += `<div class="ko-section"><h3>🏆 Finale — MetLife Stadium, 19. Juli</h3>`;
+  html += `<div class="ko-match" style="border:2px solid var(--gold);background:rgba(212,168,67,0.08)">`;
+  html += `<span class="flag" style="font-size:1.5em">${finalist1.flag}</span> <strong style="font-size:1.1em">${finalist1.name}</strong>`;
+  html += `<span class="vs" style="font-size:1.1em">vs</span>`;
+  html += `<span class="flag" style="font-size:1.5em">${finalist2.flag}</span> <strong style="font-size:1.1em">${finalist2.name}</strong>`;
+  html += `<span style="margin-left:auto;color:var(--gold);font-size:1em;font-weight:700">${finalPred.goalsA}:${finalPred.goalsB}</span>`;
+  html += `</div>`;
+  const champ = finalPred.goalsA >= finalPred.goalsB ? finalist1 : finalist2;
+  html += `<p style="text-align:center;margin-top:12px;font-size:1.3em">🏆 Weltmeister: <strong style="color:var(--gold)">${champ.flag} ${champ.name}</strong></p>`;
+  html += `</div>`;
+
+  return html;
+}
+
+function predictKoWinner(g1, g2) {
+  const gi1 = GROUP_NAMES.indexOf(g1), gi2 = GROUP_NAMES.indexOf(g2);
+  const t1 = TEAMS[calcGroupTable(gi1)[0].id];
+  const t2 = TEAMS[calcGroupTable(gi2)[0].id];
+  const pred = predictMatch(t1.id, t2.id);
+  return pred.goalsA >= pred.goalsB ? t1 : t2;
+}
+
+function renderEloEditor() {
+  let html = `<h2 style="color:var(--gold);margin-bottom:8px">Elo-Werte anpassen</h2>`;
+  html += `<p style="color:var(--txt2);font-size:0.85em;margin-bottom:16px">Hier kannst du die Elo-Ratings aller 48 Teams manuell anpassen. Änderungen wirken sich sofort auf alle Prognosen aus.</p>`;
+  html += `<div class="actions"><button class="btn btn-outline" id="resetElo">Auf Ausgangswerte zurücksetzen</button></div>`;
+  html += `<div class="elo-grid">`;
+  TEAMS.forEach(t => {
+    html += `<div class="elo-item"><span class="flag">${t.flag}</span><span>${t.name}</span>`;
+    html += `<input type="number" step="10" min="1000" max="2500" value="${t.elo}" data-elo="${t.id}"></div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function renderExport() {
+  let html = `<h2 style="color:var(--gold);margin-bottom:8px">Tipps exportieren</h2>`;
+  html += `<p style="color:var(--txt2);font-size:0.85em;margin-bottom:16px">Alle Prognosen (bzw. eingetragene Resultate) als Textliste — zum Kopieren für dein Tippspiel.</p>`;
+  html += `<div class="actions">`;
+  html += `<button class="btn btn-gold" id="exportPred">Nur Prognosen</button>`;
+  html += `<button class="btn btn-outline" id="exportAll">Prognosen + eingetragene Resultate</button>`;
+  html += `</div>`;
+  html += `<div class="export-box" id="exportBox">${generateExport(false)}</div>`;
+  return html;
+}
+
+function generateExport(inclActual) {
+  let lines = [];
+  lines.push('=== WM 2026 TIPPSPIEL — Prognosen ===\n');
+  for (let gi = 0; gi < 12; gi++) {
+    lines.push(`--- Gruppe ${GROUP_NAMES[gi]} ---`);
+    const tids = GROUPS[gi];
+    for (let md = 0; md < 3; md++) {
+      for (let mi = 0; mi < 2; mi++) {
+        const [hi, ai] = MATCHDAYS[md][mi];
+        const hid = tids[hi], aid = tids[ai];
+        const key = `g${gi}_m${md*2+mi}`;
+        const r = results[key];
+        const pred = predictMatch(hid, aid);
+        let line = `  ${TEAMS[hid].name} - ${TEAMS[aid].name}: `;
+        if (inclActual && r && r.goalsA !== '' && r.goalsB !== '') {
+          line += `${r.goalsA}:${r.goalsB} (tatsächlich) [Prognose: ${pred.goalsA}:${pred.goalsB}]`;
+        } else {
+          line += `${pred.goalsA}:${pred.goalsB}`;
+        }
+        lines.push(line);
+      }
+    }
+    // Table
+    const table = calcGroupTable(gi);
+    lines.push(`  Tabelle: ${table.map((t,i) => `${i+1}.${TEAMS[t.id].name}(${t.pts}P)`).join(' ')}`);
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+// ============================================================
+// EVENT BINDING
+// ============================================================
+function bindEvents() {
+  // Tab clicks
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      activeTab = tab.dataset.tab;
+      render();
+    });
+  });
+
+  // Score inputs
+  document.querySelectorAll('.score-inputs input').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const key = inp.dataset.key;
+      const side = inp.dataset.side;
+      if (!results[key]) results[key] = {goalsA:'', goalsB:''};
+      const val = inp.value === '' ? '' : parseInt(inp.value);
+      if (side === 'A') results[key].goalsA = isNaN(val) ? '' : val;
+      else results[key].goalsB = isNaN(val) ? '' : val;
+
+      // Update Elo if both scores entered
+      const r = results[key];
+      if (r.goalsA !== '' && r.goalsB !== '') {
+        // Find the teams for this match
+        const parts = key.split('_');
+        const gi = parseInt(parts[0].slice(1));
+        const mi = parseInt(parts[1].slice(1));
+        const md = Math.floor(mi / 2);
+        const mmi = mi % 2;
+        const tids = GROUPS[gi];
+        const [hi, ai] = MATCHDAYS[md][mmi];
+        // Only update Elo once (check if already updated)
+        updateElo(tids[hi], tids[ai], r.goalsA, r.goalsB);
+      }
+      render();
+    });
+  });
+
+  // Param inputs
+  document.querySelectorAll('[data-param]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      params[inp.dataset.param] = parseFloat(inp.value);
+      render();
+    });
+  });
+
+  // Elo inputs
+  document.querySelectorAll('[data-elo]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      TEAMS[parseInt(inp.dataset.elo)].elo = parseInt(inp.value);
+      render();
+    });
+  });
+
+  // Params toggle
+  const pt = document.getElementById('ptoggle');
+  if (pt) pt.addEventListener('click', () => { paramsOpen = !paramsOpen; render(); });
+
+  // Fill predictions
+  const fp = document.getElementById('fillPred');
+  if (fp) fp.addEventListener('click', () => {
+    const gi = parseInt(fp.dataset.gi);
+    const tids = GROUPS[gi];
+    for (let md = 0; md < 3; md++) {
+      for (let mi = 0; mi < 2; mi++) {
+        const key = `g${gi}_m${md*2+mi}`;
+        if (!results[key] || results[key].goalsA === '' || results[key].goalsB === '') {
+          const [hi, ai] = MATCHDAYS[md][mi];
+          const pred = predictMatch(tids[hi], tids[ai]);
+          results[key] = {goalsA: pred.goalsA, goalsB: pred.goalsB};
+        }
+      }
+    }
+    render();
+  });
+
+  // Clear group
+  const cg = document.getElementById('clearGroup');
+  if (cg) cg.addEventListener('click', () => {
+    const gi = parseInt(cg.dataset.gi);
+    for (let md = 0; md < 3; md++) {
+      for (let mi = 0; mi < 2; mi++) {
+        delete results[`g${gi}_m${md*2+mi}`];
+      }
+    }
+    // Reset Elo for these teams
+    GROUPS[gi].forEach(id => { TEAMS[id].elo = TEAMS[id].base; });
+    render();
+  });
+
+  // Reset Elo
+  const re = document.getElementById('resetElo');
+  if (re) re.addEventListener('click', () => {
+    TEAMS.forEach(t => { t.elo = t.base; });
+    results = {};
+    render();
+  });
+
+  // Export buttons
+  const ep = document.getElementById('exportPred');
+  if (ep) ep.addEventListener('click', () => {
+    document.getElementById('exportBox').textContent = generateExport(false);
+  });
+  const ea = document.getElementById('exportAll');
+  if (ea) ea.addEventListener('click', () => {
+    document.getElementById('exportBox').textContent = generateExport(true);
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+loadState();
+render();
+</script>
+</body>
+</html>
