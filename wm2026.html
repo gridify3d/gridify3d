@@ -204,6 +204,18 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .bracket-legend .bl-pred::before{background:#3d5275}
 .bracket-legend .bl-real::before{background:#27ae60}
 .bracket-legend .bl-tbd::before{background:#1a2744}
+
+/* Plattformunabhängige Emoji-/Flaggen-Darstellung via Twemoji */
+img.emoji{
+  width:1.15em;
+  height:1.15em;
+  vertical-align:-0.18em;
+  display:inline-block;
+}
+.flag img.emoji{
+  width:1.25em;
+  height:1.25em;
+}
 </style>
 </head>
 <body>
@@ -213,6 +225,7 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 <div class="tabs" id="tabs"></div>
 <div class="main" id="main"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js"></script>
 <script>
 // ============================================================
 // DATA
@@ -659,6 +672,16 @@ function calcTable(gi){
   return tb;
 }
 
+
+function applyTwemoji(){
+  if(!window.twemoji) return;
+  twemoji.parse(document.body,{
+    folder:'svg',
+    ext:'.svg',
+    base:'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
+  });
+}
+
 // ============================================================
 // RENDER
 // ============================================================
@@ -674,6 +697,7 @@ function render(){
   else if(activeTab==='api')m.innerHTML=renderAPI();
   else if(activeTab==='export')m.innerHTML=renderExport();
   else{const gi=GN.indexOf(activeTab);if(gi>=0)m.innerHTML=renderGroup(gi)}
+  applyTwemoji();
   bind();save();
 }
 
@@ -1223,6 +1247,32 @@ function renderAPI(){
 }
 
 
+
+
+// Twemoji-Bilder für Canvas (Turnierbaum). twemoji.parse() wirkt nur auf HTML, nicht auf <canvas>.
+const FLAG_CANVAS_CACHE = {};
+function flagToTwemojiUrl(flag){
+  if(!flag) return null;
+  let code = null;
+  if(window.twemoji && twemoji.convert && twemoji.convert.toCodePoint){
+    code = twemoji.convert.toCodePoint(flag);
+  } else {
+    code = Array.from(flag).map(ch => ch.codePointAt(0).toString(16)).join('-');
+  }
+  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${code}.svg`;
+}
+function getCanvasFlagImage(flag){
+  const url = flagToTwemojiUrl(flag);
+  if(!url) return null;
+  if(FLAG_CANVAS_CACHE[url]) return FLAG_CANVAS_CACHE[url];
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { if(activeTab === 'bracket') renderBracket(); };
+  img.src = url;
+  FLAG_CANVAS_CACHE[url] = img;
+  return img;
+}
+
 // ============================================================
 // TURNIERBAUM — Canvas-basiert
 // ============================================================
@@ -1331,9 +1381,28 @@ function renderBracket(){
   // Draw matches — uses koPredictions + koResults (already computed in render())
   const clickZones=[];
 
-  function truncate(ctx, txt, maxW){
-    while(ctx.measureText(txt).width>maxW&&txt.length>3) txt=txt.slice(0,-1);
-    return txt.length<txt.length?txt.slice(0,-1)+'…':txt;
+  function truncateText(ctx, txt, maxW){
+    const original = txt || '';
+    let out = original;
+    while(ctx.measureText(out).width > maxW && out.length > 3) out = out.slice(0,-1);
+    return out.length < original.length ? out.slice(0,-1) + '…' : out;
+  }
+
+  function drawCanvasTeam(team, x, y, maxW, bold, color){
+    const flagSize = 11;
+    const gap = 4;
+    const img = getCanvasFlagImage(team.flag);
+    if(img && img.complete && img.naturalWidth > 0){
+      ctx.drawImage(img, x, y - flagSize + 2, flagSize, flagSize);
+    } else {
+      // Fallback ohne Länder-Code: leerer Platz, bis SVG geladen ist.
+      ctx.fillStyle = '#1e2d4a';
+      roundRect(ctx, x, y - flagSize + 2, flagSize, flagSize, 2);
+      ctx.fill();
+    }
+    ctx.font = `${bold ? 'bold ' : ''}9px "Segoe UI",sans-serif`;
+    ctx.fillStyle = color;
+    ctx.fillText(truncateText(ctx, team.name, maxW - flagSize - gap), x + flagSize + gap, y);
   }
 
   ROUNDS.forEach((rnd,ri)=>{
@@ -1398,13 +1467,10 @@ function renderBracket(){
       const yA=y+15, yB=y+31, yScr=y+MH/2+1;
       const maxNameW=MW-52;
 
-      // Team A row
+      // Team A row — Flaggen als Twemoji-SVG zeichnen, nicht als Unicode-Text
       if(tA){
-        ctx.font=`${isLocked&&winnerA?'bold ':''}9px "Segoe UI",sans-serif`;
-        ctx.fillStyle=isLocked?(winnerA?'#e8eaf0':'#5d6a85'):(winnerA?'#c8cad4':'#9aa3b8');
-        let txt=tA.flag+' '+tA.name;
-        while(ctx.measureText(txt).width>maxNameW&&txt.length>4) txt=txt.slice(0,-1);
-        ctx.fillText(txt, nameX, yA);
+        const color=isLocked?(winnerA?'#e8eaf0':'#5d6a85'):(winnerA?'#c8cad4':'#9aa3b8');
+        drawCanvasTeam(tA, nameX, yA, maxNameW, isLocked&&winnerA, color);
       } else {
         ctx.font='italic 8px "Segoe UI",sans-serif'; ctx.fillStyle='#3d5275';
         ctx.fillText(slotLabel(m.slotA), nameX, yA);
@@ -1414,13 +1480,10 @@ function renderBracket(){
       ctx.strokeStyle='#1e2d4a'; ctx.lineWidth=0.5;
       ctx.beginPath(); ctx.moveTo(x+4,y+MH/2); ctx.lineTo(x+MW-4,y+MH/2); ctx.stroke();
 
-      // Team B row
+      // Team B row — Flaggen als Twemoji-SVG zeichnen, nicht als Unicode-Text
       if(tB){
-        ctx.font=`${isLocked&&winnerB?'bold ':''}9px "Segoe UI",sans-serif`;
-        ctx.fillStyle=isLocked?(winnerB?'#e8eaf0':'#5d6a85'):(winnerB?'#c8cad4':'#9aa3b8');
-        let txt=tB.flag+' '+tB.name;
-        while(ctx.measureText(txt).width>maxNameW&&txt.length>4) txt=txt.slice(0,-1);
-        ctx.fillText(txt, nameX, yB);
+        const color=isLocked?(winnerB?'#e8eaf0':'#5d6a85'):(winnerB?'#c8cad4':'#9aa3b8');
+        drawCanvasTeam(tB, nameX, yB, maxNameW, isLocked&&winnerB, color);
       } else {
         ctx.font='italic 8px "Segoe UI",sans-serif'; ctx.fillStyle='#3d5275';
         ctx.fillText(slotLabel(m.slotB), nameX, yB);
