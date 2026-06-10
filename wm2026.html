@@ -632,12 +632,12 @@ let apiLastUpdate=null;
 let apiUpdating=false;
 
 function save(){
-  try{localStorage.setItem('wm26ts',JSON.stringify({results,koResults,P,apiToken,apiLastUpdate}))}catch(e){}
+  try{localStorage.setItem('wm26ts',JSON.stringify({results,koResults,P,apiLastUpdate}))}catch(e){}
 }
 function load(){
   try{
     const s=JSON.parse(localStorage.getItem('wm26ts'));
-    if(s){if(s.results)results=s.results;if(s.koResults)koResults=s.koResults;if(s.P)Object.assign(P,s.P);if(s.apiToken)apiToken=s.apiToken;if(s.apiLastUpdate)apiLastUpdate=s.apiLastUpdate;}
+    if(s){if(s.results)results=s.results;if(s.koResults)koResults=s.koResults;if(s.P)Object.assign(P,s.P);if(s.apiLastUpdate)apiLastUpdate=s.apiLastUpdate;}
     recalcAllElos();
   }catch(e){}
 }
@@ -1067,20 +1067,21 @@ function buildMatchKeyMap(){
 // ============================================================
 // API FUNCTIONS
 // ============================================================
-async function apiTest(token){
-  const r=await fetch('https://api.football-data.org/v4/competitions/WC/matches?season=2026&limit=1',{
-    headers:{'X-Auth-Token':token}
-  });
-  if(!r.ok) throw new Error(`HTTP ${r.status}`);
-  const d=await r.json();
-  return d;
+async function apiTest(){
+  const r = await fetch('/api/football?limit=1');
+  if(!r.ok){
+    const text = await r.text();
+    throw new Error(`HTTP ${r.status}: ${text}`);
+  }
+  return await r.json();
 }
 
-async function apiFetchAllMatches(token){
-  const r=await fetch('https://api.football-data.org/v4/competitions/WC/matches?season=2026',{
-    headers:{'X-Auth-Token':token}
-  });
-  if(!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+async function apiFetchAllMatches(){
+  const r = await fetch('/api/football');
+  if(!r.ok){
+    const text = await r.text();
+    throw new Error(`HTTP ${r.status}: ${text}`);
+  }
   return await r.json();
 }
 
@@ -1095,7 +1096,7 @@ async function apiUpdateResults(){
   render();
 
   try{
-    const data=await apiFetchAllMatches(apiToken);
+    const data=await apiFetchAllMatches();
     const matches=data.matches||[];
     const mkMap=buildMatchKeyMap();
     let newCount=0, skipCount=0, warnCount=0;
@@ -1182,20 +1183,15 @@ async function apiUpdateResults(){
 // RENDER API TAB
 // ============================================================
 function renderAPI(){
-  const hasToken=apiToken.length>10;
   let h=`<h2 style="color:var(--gold);margin-bottom:6px">🌐 Live-Update via football-data.org</h2>`;
-  h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:20px">Trägt alle abgeschlossenen Gruppenspiele automatisch ein und sperrt sie. Dein API-Token wird nur lokal gespeichert.</p>`;
+  h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:20px">Trägt alle abgeschlossenen Gruppenspiele automatisch ein und sperrt sie. Der API-Key liegt serverseitig in Vercel und wird nicht mehr im Browser gespeichert.</p>`;
 
-  // Token section
-  h+=`<div class="api-section"><h3>1. API-Token</h3>`;
+  // Proxy/API section
+  h+=`<div class="api-section"><h3>1. Verbindung prüfen</h3>`;
   h+=`<div class="token-row">`;
-  h+=`<input type="text" id="tokenInput" placeholder="Dein football-data.org Token (z.B. abc123...)" value="${apiToken}" autocomplete="off" spellcheck="false">`;
-  h+=`<button class="btn btn-outline" id="btnSaveToken">💾 Speichern</button>`;
-  h+=`<button class="btn btn-outline" id="btnTestToken" ${!hasToken?'disabled':''}>🔍 Testen</button>`;
+  h+=`<button class="btn btn-outline" id="btnTestToken" ${apiUpdating?'disabled':''}>🔍 Vercel-Proxy testen</button>`;
   h+=`</div>`;
-  if(!hasToken){
-    h+=`<p style="font-size:.78em;color:var(--txt3);margin-top:4px">Token unter <a href="https://www.football-data.org/client/register" target="_blank" style="color:var(--blue)">football-data.org/client/register</a> kostenlos registrieren.</p>`;
-  }
+  h+=`<p style="font-size:.78em;color:var(--txt3);margin-top:4px">Aufruf läuft über <code>/api/football</code>. Voraussetzung: Vercel Environment Variable <code>FOOTBALL_API_KEY</code> ist gesetzt.</p>`;
   h+=`</div>`;
 
   // Status + Update button
@@ -1209,7 +1205,7 @@ function renderAPI(){
   else if(apiLastUpdate){badgeCls='idle';badgeTxt=`Letztes Update: ${apiLastUpdate}`;}
 
   h+=`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">`;
-  h+=`<button class="btn btn-gold" id="btnUpdate" ${!hasToken||apiUpdating?'disabled':''}>`;
+  h+=`<button class="btn btn-gold" id="btnUpdate" ${apiUpdating?'disabled':''}>`;
   h+=apiUpdating?'⏳ Wird geladen...':'🔄 Resultate jetzt aktualisieren';
   h+=`</button>`;
   if(apiLastUpdate&&!apiUpdating) h+=`<span style="font-size:.75em;color:var(--txt3)">Letztes Update: ${apiLastUpdate}</span>`;
@@ -1639,36 +1635,18 @@ function bind(){
   const btt=document.getElementById('btnTestToken');
   const bup=document.getElementById('btnUpdate');
 
-  if(ti) ti.addEventListener('input',()=>{
-    // enable/disable test button live
-    const hasT=ti.value.trim().length>10;
-    if(btt) btt.disabled=!hasT;
-  });
-
-  if(bst) bst.onclick=()=>{
-    const val=document.getElementById('tokenInput')?.value?.trim()||'';
-    if(val.length<5){alert('Bitte gültigen Token eingeben.');return;}
-    apiToken=val;
-    apiStatus=null;
-    apiStatusMsg='';
-    render();
-  };
-
   if(btt) btt.onclick=async()=>{
-    const val=document.getElementById('tokenInput')?.value?.trim()||apiToken;
-    if(!val){return;}
-    apiToken=val;
     apiStatus='loading';
-    apiStatusMsg='Verbindung wird geprüft...';
+    apiStatusMsg='Vercel-Proxy wird geprüft...';
     render();
     try{
-      const d=await apiTest(apiToken);
+      const d=await apiTest();
       const total=(d.resultSet?.count||d.matches?.length||'?');
       apiStatus='ok';
-      apiStatusMsg=`✅ Token gültig! API antwortet · ${total} WM-Spiele gefunden`;
+      apiStatusMsg=`✅ Proxy funktioniert! football-data.org antwortet · ${total} WM-Spiel(e) gefunden`;
     }catch(e){
       apiStatus='error';
-      apiStatusMsg=`❌ Token ungültig oder kein Zugriff: ${e.message}`;
+      apiStatusMsg=`❌ Proxy/API-Fehler: ${e.message}`;
     }
     render();
   };
