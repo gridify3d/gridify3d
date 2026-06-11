@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WM 2026 Tippspiel Simulator v2</title>
+<title>DonTippspiel – WM 2026</title>
 <style>
 :root {
   --bg:    #f5f5f7;
@@ -228,7 +228,7 @@ img.emoji{width:1.15em;height:1.15em;vertical-align:-0.18em;display:inline-block
 </head>
 <body>
 <div class="header">
-  <h1>⚽ WM 2026 Tippspiel Simulator<span>Elo-Poisson · Live-Prognosen · Resultat-Tracking</span></h1>
+  <h1>⚽ DonTippspiel – WM 2026<span>Elo-Poisson · Live-Prognosen · Resultat-Tracking</span></h1>
 </div>
 <div class="tabs" id="tabs"></div>
 <div class="main" id="main"></div>
@@ -1399,8 +1399,13 @@ function genExport(){
         const r=results[key];
         const pr=predictMatch(hid,aid);
         let ln=`  ${TEAMS[hid].name} – ${TEAMS[aid].name}: `;
-        if(r&&r.locked)ln+=`${r.goalsA}:${r.goalsB} ✅ (Prognose: ${pr.goalsA}:${pr.goalsB})`;
-        else ln+=`${pr.goalsA}:${pr.goalsB} 🔮`;
+        if(r&&r.locked){
+          ln+=`${r.goalsA}:${r.goalsB} ✅`;
+        } else if(r&&r.goalsA!==''&&r.goalsB!==''){
+          ln+=`${r.goalsA}:${r.goalsB} ✏️ (Elo-Prognose: ${pr.goalsA}:${pr.goalsB})`;
+        } else {
+          ln+=`${pr.goalsA}:${pr.goalsB} 🔮 (Prognose)`;
+        }
         L.push(ln);
       }
     }
