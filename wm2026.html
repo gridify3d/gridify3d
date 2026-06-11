@@ -999,6 +999,7 @@ function applyMotivationBonus(){
 let results={}; // key → {goalsA, goalsB, locked}
 let activeTab='overview';
 let paramsOpen=false;
+let overviewLockedOnly=false; // Toggle: nur gesperrte Resultate in Gruppenübersicht
 let apiToken='';
 let apiStatus=null; // null | 'ok' | 'error' | 'loading'
 let apiStatusMsg='';
@@ -1063,6 +1064,31 @@ function calcTable(gi){
   return tb;
 }
 
+
+// Tabelle nur aus gesperrten Resultaten (keine Prognosen)
+function calcTableLocked(gi){
+  const tids=GROUPS[gi];
+  const tb=tids.map(id=>({id,pts:0,gf:0,ga:0,gd:0,w:0,d:0,l:0,played:0}));
+  const lk={};tids.forEach((id,i)=>lk[id]=i);
+  for(let md=0;md<3;md++){
+    for(let mi=0;mi<2;mi++){
+      const key=`g${gi}_m${md*2+mi}`;
+      const r=results[key];
+      if(!r||!r.locked) continue;
+      const[hi,ai]=MDS[md][mi];
+      const hid=tids[hi],aid=tids[ai];
+      const gA=r.goalsA,gB=r.goalsB;
+      const h=tb[lk[hid]],a=tb[lk[aid]];
+      h.gf+=gA;h.ga+=gB;h.played++;a.gf+=gB;a.ga+=gA;a.played++;
+      if(gA>gB){h.w++;h.pts+=3;a.l++}
+      else if(gA===gB){h.d++;h.pts+=1;a.d++;a.pts+=1}
+      else{a.w++;a.pts+=3;h.l++}
+    }
+  }
+  tb.forEach(t=>t.gd=t.gf-t.ga);
+  tb.sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf);
+  return tb;
+}
 
 function applyTwemoji(){
   if(!window.twemoji) return;
@@ -1432,7 +1458,7 @@ function renderGroup(gi){
 }
 
 function renderTable(tb){
-  let h=`<table class="group-table"><thead><tr><th>#</th><th>Team</th><th class="num">Sp</th><th class="num">S</th><th class="num">U</th><th class="num">N</th><th class="num">T</th><th class="num">TD</th><th class="num">Pkt</th></tr></thead><tbody>`;
+  let h=`<table class="group-table"><thead><tr><th>#</th><th>Team</th><th class="num">Sp</th><th class="num">S</th><th class="num">U</th><th class="num">N</th><th class="num">+</th><th class="num">−</th><th class="num">TD</th><th class="num">Pkt</th></tr></thead><tbody>`;
   tb.forEach((t,i)=>{
     const cls=i===0?'q1':i===1?'q2':i===2?'q3':'';
     const diff=TEAMS[t.id].elo-TEAMS[t.id].base;
@@ -1440,7 +1466,9 @@ function renderTable(tb){
     h+=`<tr class="${cls}"><td class="num"><span class="pos">${i+1}</span></td>`;
     h+=`<td><div class="team-cell"><span class="flag">${TEAMS[t.id].flag}</span>${TEAMS[t.id].name} <span style="color:var(--txt3);font-size:.75em">${TEAMS[t.id].elo} ${diffStr}</span></div></td>`;
     h+=`<td class="num">${t.played}/3</td><td class="num">${t.w}</td><td class="num">${t.d}</td><td class="num">${t.l}</td>`;
-    h+=`<td class="num">${t.gf}:${t.ga}</td><td class="num">${t.gd>0?'+':''}${t.gd}</td>`;
+    h+=`<td class="num" style="color:var(--green);font-weight:600">${t.gf}</td>`;
+    h+=`<td class="num" style="color:var(--red);font-weight:600">${t.ga}</td>`;
+    h+=`<td class="num">${t.gd>0?'+':''}${t.gd}</td>`;
     h+=`<td class="num" style="font-weight:700;font-size:1.05em">${t.pts}</td></tr>`;
   });
   h+=`</tbody></table>`;
@@ -1463,16 +1491,37 @@ function renderParams(){
 }
 
 function renderOverview(){
-  let h=`<h2 style="color:var(--gold);margin-bottom:6px">Gruppenübersicht</h2>`;
-  h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:16px">Klick auf eine Gruppe zum Bearbeiten. Grün = gesperrte Resultate, grau = Prognosen.</p>`;
+  let h=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">`;
+  h+=`<div><h2 style="color:var(--txt);font-weight:700;letter-spacing:-.2px">Gruppenübersicht</h2>`;
+  h+=`<p style="color:var(--txt2);font-size:.82em;margin-top:2px">Klick auf eine Gruppe zum Bearbeiten.</p></div>`;
+
+  // Toggle: Prognosen ein/aus
+  const tog=overviewLockedOnly;
+  h+=`<button id="toggleLockedOnly" style="display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:20px;border:1.5px solid ${tog?'var(--blue)':'var(--border)'};background:${tog?'rgba(28,110,243,.08)':'var(--bg2)'};color:${tog?'var(--blue)':'var(--txt2)'};font-size:.8em;font-weight:600;cursor:pointer;transition:all .15s">`;
+  h+=`<span style="width:28px;height:16px;border-radius:8px;background:${tog?'var(--blue)':'var(--bg4)'};position:relative;display:inline-block;transition:background .2s">`;
+  h+=`<span style="position:absolute;top:2px;left:${tog?'14':'2'}px;width:12px;height:12px;border-radius:50%;background:#fff;transition:left .2s;display:block"></span>`;
+  h+=`</span>`;
+  h+=`${tog?'Nur gesperrte Resultate':'Prognosen einbeziehen'}</button>`;
+  h+=`</div>`;
+
   h+=`<div class="overview-grid">`;
   for(let gi=0;gi<12;gi++){
-    const tb=calcTable(gi);
-    let locked=0;for(let i=0;i<6;i++){const r=results[`g${gi}_m${i}`];if(r&&r.locked)locked++}
-    h+=`<div class="overview-card" data-goto="${GN[gi]}"><h4>Gruppe ${GN[gi]} <span style="font-weight:400;font-size:.85em;color:var(--txt3)">${locked}/6 ✅</span></h4>`;
+    const tb = overviewLockedOnly ? calcTableLocked(gi) : calcTable(gi);
+    let locked=0; for(let i=0;i<6;i++){const r=results[`g${gi}_m${i}`];if(r&&r.locked)locked++}
+    h+=`<div class="overview-card" data-goto="${GN[gi]}">`;
+    h+=`<h4>Gruppe ${GN[gi]} <span style="font-weight:400;font-size:.82em;color:var(--txt3)">${locked}/6 ✅</span></h4>`;
     tb.forEach((t,i)=>{
       const cls=i===0?'first':i===1?'second':i===2?'third':'fourth';
-      h+=`<div class="overview-team ${cls}"><span>${i+1}.</span><span style="font-size:1em">${TEAMS[t.id].flag}</span>${TEAMS[t.id].name}<span class="overview-elo">${t.pts}P</span></div>`;
+      const goalStr=overviewLockedOnly
+        ? (t.played>0?`<span style="color:var(--txt3);font-size:.72em">${t.gf}:${t.ga}</span>`:'')
+        : `<span style="color:var(--txt3);font-size:.72em">${t.gf}:${t.ga}</span>`;
+      h+=`<div class="overview-team ${cls}">`;
+      h+=`<span style="min-width:14px">${i+1}.</span>`;
+      h+=`<span style="font-size:1em">${TEAMS[t.id].flag}</span>`;
+      h+=`<span style="flex:1">${TEAMS[t.id].name}</span>`;
+      h+=`${goalStr}`;
+      h+=`<span class="overview-elo">${t.pts}P</span>`;
+      h+=`</div>`;
     });
     h+=`</div>`;
   }
@@ -2407,6 +2456,8 @@ function roundRect(ctx,x,y,w,h,r){
 // ============================================================
 function bind(){
   document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{activeTab=t.dataset.tab;render()});
+  const tog=document.getElementById('toggleLockedOnly');
+  if(tog)tog.onclick=(e)=>{e.stopPropagation();overviewLockedOnly=!overviewLockedOnly;render();};
   document.querySelectorAll('[data-goto]').forEach(c=>c.onclick=()=>{activeTab=c.dataset.goto;render()});
   document.querySelectorAll('.ag-group-badge[data-goto]').forEach(c=>c.onclick=(e)=>{e.stopPropagation();activeTab=c.dataset.goto;render()});
   document.querySelectorAll('.bgm-grp[data-goto]').forEach(c=>c.onclick=(e)=>{e.stopPropagation();activeTab=c.dataset.goto;render()});
