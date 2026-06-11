@@ -847,6 +847,8 @@ function updateEloSingle(idA,idB,gA,gB){
 // Alle Elos ab Basis neu berechnen basierend auf gesperrten Resultaten
 function recalcAllElos(){
   TEAMS.forEach(t=>t.elo=t.base);
+  // Team-Stärken auf Basis-Werte zurücksetzen vor Neuberechnung
+  TEAM_RATINGS.forEach((r,i)=>{ r.atk=DEFAULT_RATINGS[i].atk; r.def=DEFAULT_RATINGS[i].def; });
   for(let md=0;md<3;md++){
     for(let gi=0;gi<12;gi++){
       for(let mi=0;mi<2;mi++){
@@ -856,11 +858,56 @@ function recalcAllElos(){
           const tids=GROUPS[gi];
           const[hi,ai]=MDS[md][mi];
           updateEloSingle(tids[hi],tids[ai],r.goalsA,r.goalsB);
+          updateTeamRatings(tids[hi],tids[ai],r.goalsA,r.goalsB);
         }
       }
     }
   }
   applyMotivationBonus();
+}
+
+// Passt atk/def der Teams an basierend auf Über-/Unterperformance
+// gegenüber der Erwartung (λ aus Poisson-Modell zum Zeitpunkt des Spiels).
+// Lernrate klein damit ein Spiel nicht alles umwirft.
+function updateTeamRatings(idA, idB, gA, gB){
+  const LEARN = 0.04; // Lernrate: 4% pro Spiel
+
+  // Erwartete Tore zum Zeitpunkt des Spiels (aktuelles Elo + aktuelle Ratings)
+  const pred = predictMatchExt(idA, idB);
+  const expA = pred.lA; // erwartete Tore Team A
+  const expB = pred.lB; // erwartete Tore Team B
+
+  const gAn = parseInt(gA), gBn = parseInt(gB);
+
+  // Relative Abweichung von der Erwartung (begrenzt auf ±50% pro Spiel)
+  const diffA = Math.max(-0.5, Math.min(0.5, (gAn - expA) / Math.max(expA, 0.5)));
+  const diffB = Math.max(-0.5, Math.min(0.5, (gBn - expB) / Math.max(expB, 0.5)));
+
+  // Angriff-Update: eigene Tore vs. Erwartung, gewichtet durch gegnerische Defense
+  // Starke gegnerische Defense → grössere Auswirkung bei Über/Unterperformance
+  const defWeightB = TEAM_RATINGS[idB].def; // Defensive des Gegners
+  const defWeightA = TEAM_RATINGS[idA].def;
+
+  TEAM_RATINGS[idA].atk = Math.max(0.3, Math.min(2.0,
+    TEAM_RATINGS[idA].atk + LEARN * diffA * defWeightB
+  ));
+  TEAM_RATINGS[idB].atk = Math.max(0.3, Math.min(2.0,
+    TEAM_RATINGS[idB].atk + LEARN * diffB * defWeightA
+  ));
+
+  // Defense-Update: Gegentore relativ zur Erwartung des Gegners
+  // diffA > 0 (Gegner traf mehr als erwartet) → eigene Defense sinkt
+  // diffA < 0 (Gegner traf weniger als erwartet) → eigene Defense steigt
+  // Gewichtet durch gegnerischen Angriffswert
+  const atkWeightA = TEAM_RATINGS[idA].atk;
+  const atkWeightB = TEAM_RATINGS[idB].atk;
+
+  TEAM_RATINGS[idB].def = Math.max(0.3, Math.min(2.0,
+    TEAM_RATINGS[idB].def - LEARN * diffA * atkWeightA
+  ));
+  TEAM_RATINGS[idA].def = Math.max(0.3, Math.min(2.0,
+    TEAM_RATINGS[idA].def - LEARN * diffB * atkWeightB
+  ));
 }
 
 // Turnier-Motivation: Bonus/Malus basierend auf Gruppenphase-Verlauf
@@ -1631,22 +1678,32 @@ function renderKOCard(m){
 
 function renderTeamRatings(){
   let h=`<h2 style="font-weight:700;letter-spacing:-.2px;margin-bottom:4px">🎯 Team-Stärken</h2>`;
-  h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:6px">Angriffs- und Defensivwerte fliessen in die erweiterte Prognose ein. <strong>Angriff</strong> = Torerwartungs-Multiplikator (1.0 = Durchschnitt). <strong>Defense</strong> = wie gut Gegentore verhindert werden (höher = besser).</p>`;
-  h+=`<div class="info-box" style="margin-bottom:16px">Die <strong>Elo+Stärken</strong>-Prognose in jeder Spielkarte nutzt diese Werte. Vorbelegt mit realistischen Kaderstärken basierend auf WM 2026 Aufgebot.</div>`;
+  h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:6px">Angriffs- und Defensivwerte fliessen in die erweiterte Prognose ein. <strong>Angriff</strong> = Torerwartungs-Multiplikator (1.0 = Durchschnitt). <strong>Defense</strong> = Gegentore-Widerstand (höher = besser).</p>`;
+  h+=`<div class="info-box" style="margin-bottom:12px;font-size:.78em">`;
+  h+=`🔄 <strong>Auto-Update:</strong> Nach gesperrten Spielen werden die Werte automatisch angepasst — basierend auf Über-/Unterperformance gegenüber der Erwartung, gewichtet durch die Stärke des Gegners. `;
+  h+=`Viele Tore gegen eine starke Defense → grosser Angriffs-Bonus. Wenig Gegentore gegen einen starken Angriff → grosser Defense-Bonus.`;
+  h+=`</div>`;
   h+=`<div class="actions"><button class="btn btn-outline" id="resetRatings">Auf Standardwerte zurücksetzen</button></div>`;
   h+=`<div class="elo-grid">`;
   TEAMS.forEach(t=>{
     const rt=TEAM_RATINGS[t.id];
+    const dr=DEFAULT_RATINGS[t.id];
+    const dAtk=rt.atk-dr.atk, dDef=rt.def-dr.def;
+    const fmtDelta=(d)=>d>0.005?`<span style="color:var(--green);font-size:.65em">▲${d.toFixed(2)}</span>`:
+                        d<-0.005?`<span style="color:var(--red);font-size:.65em">▼${Math.abs(d).toFixed(2)}</span>`:
+                        `<span style="color:var(--txt3);font-size:.65em">±0</span>`;
     h+=`<div class="elo-item">`;
     h+=`<span class="flag">${t.flag}</span>`;
     h+=`<span style="flex:1;font-size:.85em">${t.name}</span>`;
     h+=`<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">`;
     h+=`<div style="display:flex;align-items:center;gap:4px">`;
     h+=`<span style="font-size:.65em;color:var(--txt3);width:40px;text-align:right">Angriff</span>`;
+    h+=`${fmtDelta(dAtk)}`;
     h+=`<input type="number" step="0.05" min="0.3" max="2.0" value="${rt.atk.toFixed(2)}" data-rating="${t.id}" data-field="atk" style="width:52px">`;
     h+=`</div>`;
     h+=`<div style="display:flex;align-items:center;gap:4px">`;
     h+=`<span style="font-size:.65em;color:var(--txt3);width:40px;text-align:right">Defense</span>`;
+    h+=`${fmtDelta(dDef)}`;
     h+=`<input type="number" step="0.05" min="0.3" max="2.0" value="${rt.def.toFixed(2)}" data-rating="${t.id}" data-field="def" style="width:52px">`;
     h+=`</div>`;
     h+=`</div>`;
@@ -2557,7 +2614,9 @@ function bind(){
   });
   const rr=document.getElementById('resetRatings');
   if(rr)rr.onclick=()=>{
+    // Defaults wiederherstellen — recalcAllElos wendet dann Auto-Updates neu an
     DEFAULT_RATINGS.forEach((r,i)=>{TEAM_RATINGS[i].atk=r.atk;TEAM_RATINGS[i].def=r.def;});
+    recalcAllElos();
     render();
   };
 
