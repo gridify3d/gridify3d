@@ -356,6 +356,8 @@ const TEAM_RATINGS=[
 ];
 const DEFAULT_RATINGS=TEAM_RATINGS.map(r=>({atk:r.atk,def:r.def}));
 const GN=['A','B','C','D','E','F','G','H','I','J','K','L'];
+// defaultBase = unveränderlicher Original-Elo für den Reset-Button
+TEAMS.forEach(t=>t.defaultBase=t.base);
 const GROUPS=[[0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15],[16,17,18,19],[20,21,22,23],[24,25,26,27],[28,29,30,31],[32,33,34,35],[36,37,38,39],[40,41,42,43],[44,45,46,47]];
 const HOST_IDS=[0,4,12];
 const MDS=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];
@@ -408,93 +410,101 @@ const SF_FIXED=[
 // Each match: {id, round, date, label, slotA, slotB}
 // slotA/slotB: {type:'group'|'ko', gi, pos} or {type:'ko', matchId, winner:true/false}
 
+// ============================================================
+// K.O. BRACKET STRUCTURE — Offizielles FIFA WM 2026 Bracket
+// ============================================================
+// Slot-Typen:
+//   {src:'grp', g:'A', pos:1}          → 1. oder 2. aus Gruppe
+//   {src:'grp3', groups:['A','B','C']} → beste Dritte aus diesen Gruppen
+//   {src:'ko', id:'r32_1', w:true}     → Sieger/Verlierer eines KO-Spiels
+
 const KO_ROUNDS = ['r32','r16','qf','sf','final','3p'];
 const KO_ROUND_LABELS = {
   r32:'Sechzehntelfinale',r16:'Achtelfinale',qf:'Viertelfinale',
   sf:'Halbfinale',final:'🏆 Finale','3p':'Spiel um Platz 3'
 };
 const KO_ROUND_DATES = {
-  r32:'29. Juni – 3. Juli',r16:'5.–8. Juli',qf:'11.–12. Juli',
-  sf:'15.–16. Juli',final:'19. Juli','3p':'19. Juli'
+  r32:'29. Jun – 3. Jul',r16:'5.–8. Jul',qf:'11.–12. Jul',
+  sf:'15.–16. Jul',final:'19. Jul','3p':'18. Jul'
 };
 
-// Bracket: slots reference group positions or previous KO match winners
-// Format: slotA/slotB = {src:'grp', g:'A', pos:1} | {src:'ko', id:'r32_1', w:true}
+// Offizielles Bracket laut FIFA (Match 74–89 = R32)
+// "Best 3rd X/Y/Z" = beste Dritte aus diesen Gruppen
 const KO_BRACKET = [
-  // R32 — 16 matches (official FIFA bracket)
-  {id:'r32_1', round:'r32', label:'M37', date:'29. Jun',
-    slotA:{src:'grp',g:'A',pos:1}, slotB:{src:'grp',g:'B',pos:2}},
-  {id:'r32_2', round:'r32', label:'M38', date:'29. Jun',
-    slotA:{src:'grp',g:'C',pos:1}, slotB:{src:'grp',g:'D',pos:2}},
-  {id:'r32_3', round:'r32', label:'M39', date:'30. Jun',
-    slotA:{src:'grp',g:'E',pos:1}, slotB:{src:'grp',g:'F',pos:2}},
-  {id:'r32_4', round:'r32', label:'M40', date:'30. Jun',
-    slotA:{src:'grp',g:'G',pos:1}, slotB:{src:'grp',g:'H',pos:2}},
-  {id:'r32_5', round:'r32', label:'M41', date:'1. Jul',
-    slotA:{src:'grp',g:'I',pos:1}, slotB:{src:'grp',g:'J',pos:2}},
-  {id:'r32_6', round:'r32', label:'M42', date:'1. Jul',
-    slotA:{src:'grp',g:'K',pos:1}, slotB:{src:'grp',g:'L',pos:2}},
-  {id:'r32_7', round:'r32', label:'M43', date:'2. Jul',
-    slotA:{src:'grp',g:'B',pos:1}, slotB:{src:'grp',g:'A',pos:2}},
-  {id:'r32_8', round:'r32', label:'M44', date:'2. Jul',
-    slotA:{src:'grp',g:'D',pos:1}, slotB:{src:'grp',g:'C',pos:2}},
-  {id:'r32_9', round:'r32', label:'M45', date:'3. Jul',
-    slotA:{src:'grp',g:'F',pos:1}, slotB:{src:'grp',g:'E',pos:2}},
-  {id:'r32_10',round:'r32', label:'M46', date:'3. Jul',
-    slotA:{src:'grp',g:'H',pos:1}, slotB:{src:'grp',g:'G',pos:2}},
-  {id:'r32_11',round:'r32', label:'M47', date:'4. Jul',
-    slotA:{src:'grp',g:'J',pos:1}, slotB:{src:'grp',g:'I',pos:2}},
-  {id:'r32_12',round:'r32', label:'M48', date:'4. Jul',
-    slotA:{src:'grp',g:'L',pos:1}, slotB:{src:'grp',g:'K',pos:2}},
-  {id:'r32_13',round:'r32', label:'M49', date:'5. Jul',
-    slotA:{src:'grp',g:'A',pos:3}, slotB:{src:'grp',g:'B',pos:3}},  // best 3rd
-  {id:'r32_14',round:'r32', label:'M50', date:'5. Jul',
-    slotA:{src:'grp',g:'C',pos:3}, slotB:{src:'grp',g:'D',pos:3}},
-  {id:'r32_15',round:'r32', label:'M51', date:'6. Jul',
-    slotA:{src:'grp',g:'E',pos:3}, slotB:{src:'grp',g:'F',pos:3}},
-  {id:'r32_16',round:'r32', label:'M52', date:'6. Jul',
-    slotA:{src:'grp',g:'G',pos:3}, slotB:{src:'grp',g:'H',pos:3}},
+  // R32
+  {id:'r32_1', round:'r32', label:'M74', date:'29. Jun',
+    slotA:{src:'grp',g:'C',pos:1}, slotB:{src:'grp',g:'F',pos:2}},
+  {id:'r32_2', round:'r32', label:'M75', date:'29. Jun',
+    slotA:{src:'grp',g:'F',pos:1}, slotB:{src:'grp',g:'C',pos:2}},
+  {id:'r32_3', round:'r32', label:'M76', date:'29. Jun',
+    slotA:{src:'grp',g:'E',pos:1}, slotB:{src:'grp3',groups:['A','B','C','D','F']}},
+  {id:'r32_4', round:'r32', label:'M77', date:'30. Jun',
+    slotA:{src:'grp',g:'I',pos:1}, slotB:{src:'grp3',groups:['C','D','F','G','H']}},
+  {id:'r32_5', round:'r32', label:'M78', date:'30. Jun',
+    slotA:{src:'grp',g:'E',pos:2}, slotB:{src:'grp',g:'I',pos:2}},
+  {id:'r32_6', round:'r32', label:'M79', date:'30. Jun',
+    slotA:{src:'grp',g:'A',pos:1}, slotB:{src:'grp3',groups:['C','E','F','H','I']}},
+  {id:'r32_7', round:'r32', label:'M80', date:'1. Jul',
+    slotA:{src:'grp',g:'L',pos:1}, slotB:{src:'grp3',groups:['E','H','I','J','K']}},
+  {id:'r32_8', round:'r32', label:'M81', date:'1. Jul',
+    slotA:{src:'grp',g:'D',pos:1}, slotB:{src:'grp3',groups:['B','E','F','I','J']}},
+  {id:'r32_9', round:'r32', label:'M82', date:'1. Jul',
+    slotA:{src:'grp',g:'G',pos:1}, slotB:{src:'grp3',groups:['A','E','H','I','J']}},
+  {id:'r32_10',round:'r32', label:'M83', date:'2. Jul',
+    slotA:{src:'grp',g:'K',pos:2}, slotB:{src:'grp',g:'L',pos:2}},
+  {id:'r32_11',round:'r32', label:'M84', date:'2. Jul',
+    slotA:{src:'grp',g:'H',pos:1}, slotB:{src:'grp',g:'J',pos:2}},
+  {id:'r32_12',round:'r32', label:'M85', date:'2. Jul',
+    slotA:{src:'grp',g:'B',pos:1}, slotB:{src:'grp3',groups:['E','F','G','I','J']}},
+  {id:'r32_13',round:'r32', label:'M86', date:'3. Jul',
+    slotA:{src:'grp',g:'J',pos:1}, slotB:{src:'grp',g:'H',pos:2}},
+  {id:'r32_14',round:'r32', label:'M87', date:'3. Jul',
+    slotA:{src:'grp',g:'K',pos:1}, slotB:{src:'grp3',groups:['D','E','I','J','L']}},
+  {id:'r32_15',round:'r32', label:'M88', date:'3. Jul',
+    slotA:{src:'grp',g:'A',pos:2}, slotB:{src:'grp',g:'B',pos:2}},
+  {id:'r32_16',round:'r32', label:'M89', date:'3. Jul',
+    slotA:{src:'grp',g:'D',pos:2}, slotB:{src:'grp',g:'G',pos:2}},
 
   // R16 — 8 matches
-  {id:'r16_1', round:'r16', label:'M53', date:'8. Jul',
+  {id:'r16_1', round:'r16', label:'M90', date:'5. Jul',
     slotA:{src:'ko',id:'r32_1',w:true}, slotB:{src:'ko',id:'r32_2',w:true}},
-  {id:'r16_2', round:'r16', label:'M54', date:'8. Jul',
+  {id:'r16_2', round:'r16', label:'M91', date:'5. Jul',
     slotA:{src:'ko',id:'r32_3',w:true}, slotB:{src:'ko',id:'r32_4',w:true}},
-  {id:'r16_3', round:'r16', label:'M55', date:'9. Jul',
+  {id:'r16_3', round:'r16', label:'M92', date:'6. Jul',
     slotA:{src:'ko',id:'r32_5',w:true}, slotB:{src:'ko',id:'r32_6',w:true}},
-  {id:'r16_4', round:'r16', label:'M56', date:'9. Jul',
+  {id:'r16_4', round:'r16', label:'M93', date:'6. Jul',
     slotA:{src:'ko',id:'r32_7',w:true}, slotB:{src:'ko',id:'r32_8',w:true}},
-  {id:'r16_5', round:'r16', label:'M57', date:'10. Jul',
+  {id:'r16_5', round:'r16', label:'M94', date:'7. Jul',
     slotA:{src:'ko',id:'r32_9',w:true}, slotB:{src:'ko',id:'r32_10',w:true}},
-  {id:'r16_6', round:'r16', label:'M58', date:'10. Jul',
+  {id:'r16_6', round:'r16', label:'M95', date:'7. Jul',
     slotA:{src:'ko',id:'r32_11',w:true}, slotB:{src:'ko',id:'r32_12',w:true}},
-  {id:'r16_7', round:'r16', label:'M59', date:'11. Jul',
+  {id:'r16_7', round:'r16', label:'M96', date:'8. Jul',
     slotA:{src:'ko',id:'r32_13',w:true}, slotB:{src:'ko',id:'r32_14',w:true}},
-  {id:'r16_8', round:'r16', label:'M60', date:'11. Jul',
+  {id:'r16_8', round:'r16', label:'M97', date:'8. Jul',
     slotA:{src:'ko',id:'r32_15',w:true}, slotB:{src:'ko',id:'r32_16',w:true}},
 
   // QF — 4 matches
-  {id:'qf_1', round:'qf', label:'M61', date:'13. Jul',
+  {id:'qf_1', round:'qf', label:'M98', date:'11. Jul',
     slotA:{src:'ko',id:'r16_1',w:true}, slotB:{src:'ko',id:'r16_2',w:true}},
-  {id:'qf_2', round:'qf', label:'M62', date:'13. Jul',
+  {id:'qf_2', round:'qf', label:'M99', date:'11. Jul',
     slotA:{src:'ko',id:'r16_3',w:true}, slotB:{src:'ko',id:'r16_4',w:true}},
-  {id:'qf_3', round:'qf', label:'M63', date:'14. Jul',
+  {id:'qf_3', round:'qf', label:'M100', date:'12. Jul',
     slotA:{src:'ko',id:'r16_5',w:true}, slotB:{src:'ko',id:'r16_6',w:true}},
-  {id:'qf_4', round:'qf', label:'M64', date:'14. Jul',
+  {id:'qf_4', round:'qf', label:'M101', date:'12. Jul',
     slotA:{src:'ko',id:'r16_7',w:true}, slotB:{src:'ko',id:'r16_8',w:true}},
 
   // SF — 2 matches
-  {id:'sf_1', round:'sf', label:'M65', date:'16. Jul',
+  {id:'sf_1', round:'sf', label:'M102', date:'15. Jul',
     slotA:{src:'ko',id:'qf_1',w:true}, slotB:{src:'ko',id:'qf_2',w:true}},
-  {id:'sf_2', round:'sf', label:'M66', date:'17. Jul',
+  {id:'sf_2', round:'sf', label:'M103', date:'16. Jul',
     slotA:{src:'ko',id:'qf_3',w:true}, slotB:{src:'ko',id:'qf_4',w:true}},
 
   // 3rd place
-  {id:'3p_1', round:'3p', label:'M67', date:'19. Jul',
+  {id:'3p_1', round:'3p', label:'M104', date:'18. Jul',
     slotA:{src:'ko',id:'sf_1',w:false}, slotB:{src:'ko',id:'sf_2',w:false}},
 
   // Final
-  {id:'final_1', round:'final', label:'M68', date:'19. Jul',
+  {id:'final_1', round:'final', label:'M105', date:'19. Jul',
     slotA:{src:'ko',id:'sf_1',w:true}, slotB:{src:'ko',id:'sf_2',w:true}},
 ];
 
@@ -515,45 +525,78 @@ function loadKO(){
   }catch(e){}
 }
 
-// Resolve a slot to a team id (or null if not yet known)
-// koOverride: optional temp results map used during auto-fill
-// For PREDICTIONS: always resolve using calcTable (which uses predictions for unplayed games)
-// Only return null for pos>=3 if we explicitly need confirmed results (not during auto-fill)
-function resolveSlot(slot, koOverride){
-  const KR = koOverride || koResults;
-  if(slot.src==='grp'){
-    const gi=GN.indexOf(slot.g);
-    const tb=calcTable(gi); // calcTable already fills unplayed with predictions
-    // For pos 1+2: always resolvable via predictions
-    // For pos 3: also resolvable via predictions (we want to show something)
-    return tb[slot.pos-1]?.id ?? null;
-  } else {
-    const kr=KR[slot.id];
-    if(!kr||!kr.locked) return null;
-    const m=KO_BRACKET.find(x=>x.id===slot.id);
-    if(!m) return null;
-    const tA=resolveSlot(m.slotA, KR), tB=resolveSlot(m.slotB, KR);
-    if(tA===null||tB===null) return null;
-    if(slot.w){
-      if(kr.goalsA>kr.goalsB) return tA;
-      if(kr.goalsB>kr.goalsA) return tB;
-      if(kr.pens==='A') return tA;
-      if(kr.pens==='B') return tB;
-      return null;
-    } else {
-      if(kr.goalsA>kr.goalsB) return tB;
-      if(kr.goalsB>kr.goalsA) return tA;
-      if(kr.pens==='A') return tB;
-      if(kr.pens==='B') return tA;
-      return null;
-    }
-  }
+// ============================================================
+// PRE-COMPUTE ALL KO PREDICTIONS
+function getAllThirds(){
+  return GN.map((g,gi)=>{
+    const tb=calcTable(gi);
+    const t=tb[2];
+    if(!t) return null;
+    return {teamId:t.id, g, pts:t.pts, gd:t.gd, gf:t.gf};
+  }).filter(Boolean).sort((a,b)=>
+    b.pts-a.pts || b.gd-a.gd || b.gf-a.gf ||
+    TEAMS[b.teamId].elo - TEAMS[a.teamId].elo
+  );
 }
 
-function koWinnerTeam(matchId){
-  const m=KO_BRACKET.find(x=>x.id===matchId);
-  if(!m) return null;
-  return resolveSlot({src:'ko',id:matchId,w:true});
+// n = 1-basierter Rang (1 = bester Dritter) — Fallback
+function getNthBestThird(n){
+  return getAllThirds()[n-1]?.teamId ?? null;
+}
+
+// Weist die besten 8 Dritten konfliktfrei den 8 grp3-Slots zu.
+// Optimierungsziel: minimiere Summe der globalen Ränge (= beste Teams kommen weiter).
+// Backtracking mit Branch & Bound.
+let _thirdCache = null;
+function getThirdAssignments(){
+  if(_thirdCache) return _thirdCache;
+
+  const allThirds = getAllThirds(); // sortiert: Index 0 = bester Dritter
+  const slots = [];
+  KO_BRACKET.forEach(m=>{
+    [m.slotA, m.slotB].forEach((slot,si)=>{
+      if(slot.src==='grp3') slots.push({key:m.id+'_'+si, groups:slot.groups});
+    });
+  });
+
+  let bestScore = Infinity;
+  let bestAssigned = new Map();
+
+  // Backtracking: für jeden Slot den besten verfügbaren Kandidaten probieren
+  // score = Summe der Ränge der zugewiesenen Teams (niedriger = besser)
+  function backtrack(slotIdx, usedTeams, currentScore, currentAssigned){
+    if(slotIdx === slots.length){
+      if(currentScore < bestScore){
+        bestScore = currentScore;
+        bestAssigned = new Map(currentAssigned);
+      }
+      return;
+    }
+
+    const slot = slots[slotIdx];
+    // Pruning: selbst wenn alle restlichen Slots optimal besetzt werden,
+    // können wir bestScore nicht unterbieten
+    const remaining = slots.length - slotIdx;
+    if(currentScore >= bestScore) return;
+
+    for(let rank=0; rank<allThirds.length; rank++){
+      const t = allThirds[rank];
+      if(usedTeams.has(t.teamId)) continue;
+      if(!slot.groups.includes(t.g)) continue;
+
+      currentAssigned.set(slot.key, t.teamId);
+      usedTeams.add(t.teamId);
+      backtrack(slotIdx+1, usedTeams, currentScore+rank, currentAssigned);
+      currentAssigned.delete(slot.key);
+      usedTeams.delete(t.teamId);
+    }
+    // Falls kein Kandidat → Slot bleibt leer (nicht zählen, aber weiter)
+    // (sollte nicht vorkommen bei gültigen Gruppen-Pools)
+  }
+
+  backtrack(0, new Set(), 0, new Map());
+  _thirdCache = bestAssigned;
+  return bestAssigned;
 }
 
 function slotLabel(slot){
@@ -561,27 +604,76 @@ function slotLabel(slot){
     const pos=['1.','2.','3.'][slot.pos-1]||`${slot.pos}.`;
     return `${pos} Gr. ${slot.g}`;
   }
+  if(slot.src==='grp3'){
+    const assignments = getThirdAssignments();
+    const m = KO_BRACKET.find(x=>x.slotA===slot||x.slotB===slot);
+    const si = m ? (m.slotA===slot?0:1) : 0;
+    const teamId = m ? assignments.get(m.id+'_'+si) : null;
+    const poolStr = slot.groups.join('/');
+    return teamId ? `Bester 3. (${poolStr}) → ${TEAMS[teamId].flag} ${TEAMS[teamId].name}` : `Bester 3. (${poolStr})`;
+  }
   const m=KO_BRACKET.find(x=>x.id===slot.id);
   const rnd={r32:'R32',r16:'AF',qf:'VF',sf:'HF',final:'F','3p':'3P'}[m?.round]||'?';
   return slot.w?`Sieger ${rnd} ${m?.label||''}`:`Verlierer ${rnd} ${m?.label||''}`;
 }
 
+function resolveSlot(slot, koOverride){
+  const KR = koOverride || koResults;
+  if(slot.src==='grp'){
+    const gi=GN.indexOf(slot.g);
+    const tb=calcTable(gi);
+    return tb[slot.pos-1]?.id ?? null;
+  }
+  if(slot.src==='grp3'){
+    const assignments = getThirdAssignments();
+    // slot hier hat kein matchId — wir brauchen den Kontext.
+    // resolveSlot wird mit dem Slot-Objekt aufgerufen, aber ohne matchId.
+    // Wir finden das Match über KO_BRACKET.
+    const m = KO_BRACKET.find(x=>x.slotA===slot||x.slotB===slot);
+    if(!m) return null;
+    const si = m.slotA===slot ? 0 : 1;
+    return assignments.get(m.id+'_'+si) ?? null;
+  }
+  // src === 'ko'
+  const kr = KR[slot.id];
+  if(!kr||!kr.locked) return null;
+  const m=KO_BRACKET.find(x=>x.id===slot.id);
+  if(!m) return null;
+  const tA=resolveSlot(m.slotA, KR), tB=resolveSlot(m.slotB, KR);
+  if(tA===null||tB===null) return null;
+  if(slot.w){
+    if(kr.goalsA>kr.goalsB) return tA;
+    if(kr.goalsB>kr.goalsA) return tB;
+    if(kr.pens==='A') return tA;
+    if(kr.pens==='B') return tB;
+    return null;
+  } else {
+    if(kr.goalsA>kr.goalsB) return tB;
+    if(kr.goalsB>kr.goalsA) return tA;
+    return null;
+  }
+}
+
 // ============================================================
-// PRE-COMPUTE ALL KO PREDICTIONS (runs on every render)
-// Builds a complete prediction map for all 31 KO matches,
-// chaining round by round so each round feeds the next.
+// PRE-COMPUTE ALL KO PREDICTIONS
 // ============================================================
-let koPredictions = {}; // mid → {goalsA, goalsB, teamA, teamB}
+let koPredictions = {};
 
 function computeKOPredictions(){
   koPredictions = {};
 
-  // resolveForPred: resolves a slot using koResults (locked real results)
   // OR koPredictions (computed predictions) as fallback
   function resolveForPred(slot){
     if(slot.src==='grp'){
       const gi=GN.indexOf(slot.g);
       return calcTable(gi)[slot.pos-1]?.id ?? null;
+    }
+    if(slot.src==='grp3'){
+      const assignments = getThirdAssignments();
+      const m = KO_BRACKET.find(x=>x.slotA===slot||x.slotB===slot);
+      if(!m) return null;
+      const si = m.slotA===slot ? 0 : 1;
+      return assignments.get(m.id+'_'+si) ?? null;
     }
     // src='ko': first check real locked result
     const kr=koResults[slot.id];
@@ -644,7 +736,7 @@ function computeKOPredictions(){
 // ============================================================
 // ENGINE — optimierte Defaults
 // ============================================================
-let P={baseGoals:1.33,eloFactor:380,hostBoost:65,homeBoost:0,kFactor:50};
+let P={baseGoals:1.33,eloFactor:380,hostBoost:65,homeBoost:0,kFactor:20};
 
 function fac(n){let f=1;for(let i=2;i<=n;i++)f*=i;return f}
 function ppf(k,l){return l<=0?(k===0?1:0):Math.pow(l,k)*Math.exp(-l)/fac(k)}
@@ -737,10 +829,17 @@ function predictMatchExt(idA, idB){
 }
 
 function updateEloSingle(idA,idB,gA,gB){
-  const eA=TEAMS[idA].elo,eB=TEAMS[idB].elo;
+  const eA=TEAMS[idA].elo, eB=TEAMS[idB].elo;
   const exA=1/(1+Math.pow(10,(eB-eA)/400));
   const act=gA>gB?1:(gA===gB?.5:0);
-  const d=P.kFactor*(act-exA);
+
+  // Tordifferenz-Multiplikator (FiveThirtyEight-Methode):
+  // log(|TD|+1) dämpft grosse Siege, Elo-Diff-Korrektur verhindert Aufblasen bei Kantersiegen
+  const td=Math.abs(gA-gB);
+  const eloDiff=Math.abs(eA-eB);
+  const goalMult = td===0 ? 1 : Math.log(td+1) * (2.2/(eloDiff*0.001+2.2));
+
+  const d=P.kFactor*goalMult*(act-exA);
   TEAMS[idA].elo=Math.round(eA+d);
   TEAMS[idB].elo=Math.round(eB-d);
 }
@@ -761,6 +860,90 @@ function recalcAllElos(){
       }
     }
   }
+  applyMotivationBonus();
+}
+
+// Turnier-Motivation: Bonus/Malus basierend auf Gruppenphase-Verlauf
+// Fliesst direkt in t.elo ein → wirkt auf alle Prognosen
+function applyMotivationBonus(){
+  const assignments = _thirdCache; // bereits berechnet wenn vorhanden
+
+  for(let gi=0;gi<12;gi++){
+    const tids=GROUPS[gi];
+    const tb=calcTable(gi);
+
+    // Wieviele Spiele hat diese Gruppe gespielt (gesperrt)?
+    let played=0;
+    for(let i=0;i<6;i++){ const r=results[`g${gi}_m${i}`]; if(r&&r.locked) played++; }
+    if(played===0) continue;
+
+    // Punkte und Tordifferenz pro Team aus gesperrten Spielen
+    const stats={}; // teamId → {pts, gd, gf, wins, draws, losses}
+    tids.forEach(id=>stats[id]={pts:0,gd:0,gf:0,wins:0,draws:0,losses:0});
+
+    for(let md=0;md<3;md++){
+      for(let mi=0;mi<2;mi++){
+        const k=`g${gi}_m${md*2+mi}`;
+        const r=results[k];
+        if(!r||!r.locked) continue;
+        const[hi,ai]=MDS[md][mi];
+        const hid=tids[hi], aid=tids[ai];
+        const gA=parseInt(r.goalsA), gB=parseInt(r.goalsB);
+        stats[hid].gf+=gA; stats[hid].gd+=(gA-gB);
+        stats[aid].gf+=gB; stats[aid].gd+=(gB-gA);
+        if(gA>gB){stats[hid].pts+=3;stats[hid].wins++;stats[aid].losses++;}
+        else if(gA===gB){stats[hid].pts+=1;stats[hid].draws++;stats[aid].pts+=1;stats[aid].draws++;}
+        else{stats[aid].pts+=3;stats[aid].wins++;stats[hid].losses++;}
+      }
+    }
+
+    // Nur nach Abschluss der Gruppenphase (6 Spiele) Positions-Bonus vergeben
+    const allGroupDone = played===6;
+
+    tids.forEach(id=>{
+      const s=stats[id];
+      let bonus=0;
+
+      // 1. Siegesserie-Momentum
+      bonus += s.wins * 4;
+      bonus += s.losses * (-3);
+      bonus += Math.sign(s.gd) * Math.min(Math.abs(s.gd), 5) * 1.5;
+
+      // 2. Gruppen-Abschluss-Bonus (nur wenn alle 6 Spiele gespielt)
+      if(allGroupDone){
+        const pos=tb.findIndex(t=>t.id===id);
+        if(pos===0) bonus+=10;       // Gruppensieger
+        else if(pos===1) bonus+=4;   // Zweiter
+        else if(pos===2){
+          const asgn=getThirdAssignments();
+          const isQualified=[...asgn.values()].includes(id);
+          bonus += isQualified ? 1 : -8;
+        }
+        else bonus-=10;              // Letzter: ausgeschieden
+      }
+
+      TEAMS[id].elo=Math.round(TEAMS[id].elo+bonus);
+    });
+  }
+
+  // K.o.-Runden Motivation
+  const koRoundBonus={r32:8,r16:12,qf:18,sf:22,final:30};
+  KO_BRACKET.forEach(m=>{
+    const kr=koResults[m.id];
+    if(!kr||!kr.locked) return;
+    const bonus=koRoundBonus[m.round]||10;
+    // Sieger
+    const tAid=resolveSlot(m.slotA), tBid=resolveSlot(m.slotB);
+    if(tAid===null||tBid===null) return;
+    const gA=parseInt(kr.goalsA), gB=parseInt(kr.goalsB);
+    let winnerId=null, loserId=null;
+    if(gA>gB){winnerId=tAid;loserId=tBid;}
+    else if(gB>gA){winnerId=tBid;loserId=tAid;}
+    else if(kr.pens==='A'){winnerId=tAid;loserId=tBid;}
+    else if(kr.pens==='B'){winnerId=tBid;loserId=tAid;}
+    if(winnerId!==null) TEAMS[winnerId].elo=Math.round(TEAMS[winnerId].elo+bonus);
+    if(loserId!==null)  TEAMS[loserId].elo=Math.round(TEAMS[loserId].elo-Math.round(bonus*0.6));
+  });
 }
 
 // ============================================================
@@ -846,7 +1029,30 @@ function applyTwemoji(){
 // ============================================================
 // RENDER
 // ============================================================
+// Render und danach Scrollposition + Fokus wiederherstellen
+// Wird von Input-Handlern aufgerufen damit die Seite nicht nach oben springt
+function renderWithFocus(){
+  const scrollY=window.scrollY;
+  const active=document.activeElement;
+  const aKey=active?.dataset?.key||null;
+  const aKo=active?.dataset?.ko||null;
+  const aSide=active?.dataset?.side||null;
+  const selStart=active?.selectionStart;
+  const selEnd=active?.selectionEnd;
+
+  render();
+
+  window.scrollTo(0,scrollY);
+  let el=null;
+  if(aKey&&aSide)
+    el=document.querySelector(`input[data-key="${aKey}"][data-side="${aSide}"]`);
+  else if(aKo&&aSide)
+    el=document.querySelector(`input[data-ko="${aKo}"][data-side="${aSide}"]`);
+  if(el){el.focus();try{el.setSelectionRange(selStart,selEnd);}catch(e){}}
+}
+
 function render(){
+  _thirdCache = null; // Cache leeren damit Drittplatzierte neu berechnet werden
   recalcAllElos();
   computeKOPredictions();
   renderTabs();
@@ -858,7 +1064,22 @@ function render(){
   else if(activeTab==='elo')m.innerHTML=renderElo();
   else if(activeTab==='bracket'){
     m.style.maxWidth='none';
-    m.innerHTML=renderBracketPage();renderBracket();
+    m.innerHTML=renderBracketPage();
+    renderBracket();
+    // Scale canvas to fit available width
+    const cnv=document.getElementById('bracketCanvas');
+    if(cnv){
+      const avail=m.offsetWidth-8;
+      const natural=parseInt(cnv.style.width)||cnv.width;
+      if(natural>avail){
+        const scale=avail/natural;
+        cnv.style.transform='scale('+scale+')';
+        document.getElementById('bracketWrap').style.height=(parseInt(cnv.style.height)*scale)+'px';
+      } else {
+        cnv.style.transform='';
+        if(document.getElementById('bracketWrap')) document.getElementById('bracketWrap').style.height='';
+      }
+    }
   }
   else if(activeTab==='api')m.innerHTML=renderAPI();
   else if(activeTab==='export')m.innerHTML=renderExport();
@@ -910,19 +1131,40 @@ function renderAllGames(){
   allMatches.sort((a,b)=>a.sortKey-b.sortKey);
 
   let h='';
-  h+=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">`;
+  // Header
+  h+=`<div style="margin-bottom:20px">`;
+  h+=`<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px">`;
   h+=`<div><h2 style="color:var(--txt);font-weight:700;letter-spacing:-.2px">Alle Gruppenspiele</h2>`;
   h+=`<p style="color:var(--txt2);font-size:.82em;margin-top:4px">Chronologisch · Eingaben synchronisieren sich mit den Gruppenansichten · ⏰ Schweizer Zeit (MESZ)</p></div>`;
-  // Progress badge + actions
+
+  // Progress pill
   const totalLocked=Object.values(results).filter(r=>r.locked).length;
-  h+=`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">`;
-  h+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px;font-size:.85em;text-align:center;box-shadow:var(--shadow-sm)">`;
-  h+=`<span style="color:var(--blue);font-weight:700;font-size:1.2em">${totalLocked}</span><span style="color:var(--txt2)">/72 gespielt</span>`;
+  const pct=Math.round(totalLocked/72*100);
+  const allDone=totalLocked===72;
+  h+=`<div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:10px 16px;box-shadow:var(--shadow-sm);min-width:180px">`;
+  h+=`<div style="flex:1">`;
+  h+=`<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">`;
+  h+=`<span style="font-size:.72em;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px">Gesperrt</span>`;
+  h+=`<span style="font-size:.95em;font-weight:700;color:${allDone?'var(--green)':'var(--txt)'}">${totalLocked}<span style="color:var(--txt3);font-weight:400">/72</span></span>`;
   h+=`</div>`;
-  h+=`<button class="btn btn-outline" id="fillAllGamesElo">Elo-Modell übernehmen</button>`;
-  h+=`<button class="btn btn-gold" id="fillAllGamesExt">Elo + Stärken übernehmen</button>`;
-  h+=`<button class="btn btn-outline" id="lockAllGames">🔒 Alle sperren</button>`;
-  h+=`</div></div>`;
+  h+=`<div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">`;
+  h+=`<div style="height:100%;width:${pct}%;background:${allDone?'var(--green)':'var(--blue)'};border-radius:3px;transition:width .3s"></div>`;
+  h+=`</div>`;
+  h+=`</div>`;
+  if(allDone) h+=`<span style="font-size:1.2em">✅</span>`;
+  h+=`</div>`;
+  h+=`</div>`;
+
+  // Button groups: übernehmen | sperren/entsperren
+  h+=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">`;
+  h+=`<span style="font-size:.72em;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-right:2px">Übernehmen:</span>`;
+  h+=`<button class="btn btn-outline" id="fillAllGamesElo" style="font-size:.8em">Elo-Modell</button>`;
+  h+=`<button class="btn btn-gold" id="fillAllGamesExt" style="font-size:.8em">Elo + Stärken</button>`;
+  h+=`<span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>`;
+  h+=`<button class="btn" id="lockAllGames" style="background:var(--green);color:#fff;font-size:.8em">🔒 Alle sperren</button>`;
+  h+=`<button class="btn btn-outline" id="unlockAllGames" style="border-color:var(--red);color:var(--red);font-size:.8em">🔓 Sperren entfernen</button>`;
+  h+=`</div>`;
+  h+=`</div>`;
 
   // Group by date label for section headers
   let lastDateLabel='';
@@ -1196,6 +1438,59 @@ function renderOverview(){
     h+=`<span style="color:var(--txt3)">Gr.${GN[gi]}:</span> ${w.flag} <strong>${w.name}</strong></div>`;
   }
   h+=`</div>`;
+
+  // Beste Drittplatzierte — nach FIFA-Slot-Zuteilung
+  h+=`<h3 style="font-weight:700;margin:24px 0 8px;font-size:.95em">🏅 Qualifizierte Drittplatzierte</h3>`;
+  h+=`<p style="color:var(--txt2);font-size:.78em;margin-bottom:10px">8 Drittplatzierte kommen weiter — je nach FIFA-Zuteilung der besten Dritten aus bestimmten Gruppen-Pools.</p>`;
+  h+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">`;
+  const assignments = getThirdAssignments();
+  KO_BRACKET.filter(m=>m.round==='r32').forEach(m=>{
+    [m.slotA,m.slotB].forEach((slot,si)=>{
+      if(slot.src!=='grp3') return;
+      const key = m.id+'_'+si;
+      const teamId = assignments.get(key);
+      const team = teamId!=null ? TEAMS[teamId] : null;
+      const allT = getAllThirds();
+      const tData = allT.find(t=>t.teamId===teamId);
+      const oppSlot = m.slotA===slot ? m.slotB : m.slotA;
+      const oppTeamId = oppSlot.src==='grp' ? calcTable(GN.indexOf(oppSlot.g))[0]?.id : null;
+      const opp = oppTeamId!=null ? TEAMS[oppTeamId] : null;
+      h+=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;box-shadow:var(--shadow-sm);font-size:.82em">`;
+      h+=`<div style="color:var(--txt3);font-size:.68em;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${m.label} · Pool: ${slot.groups.join('/')}</div>`;
+      if(team){
+        h+=`<div style="font-weight:700">${team.flag} ${team.name} <span style="color:var(--green);font-weight:400">${tData?tData.pts+'P '+(tData.gd>0?'+':'')+tData.gd+'TD':''}</span></div>`;
+      } else {
+        h+=`<div style="color:var(--txt3);font-style:italic">Noch offen</div>`;
+      }
+      if(opp) h+=`<div style="color:var(--txt3);font-size:.75em;margin-top:2px">vs. ${opp.flag} ${opp.name} (1. Gr.${oppSlot.g})</div>`;
+      h+=`</div>`;
+    });
+  });
+  h+=`</div>`;
+
+  // Globale Rangliste aller 12 Dritten
+  const allThirds=getAllThirds();
+  const assignedTeams=new Set(assignments.values());
+  h+=`<h3 style="font-weight:700;margin:20px 0 8px;font-size:.9em;color:var(--txt2)">Alle 12 Drittplatzierten im Vergleich</h3>`;
+  h+=`<div style="max-width:500px"><table style="width:100%;border-collapse:collapse;font-size:.8em">`;
+  h+=`<thead><tr style="border-bottom:1.5px solid var(--border)">`;
+  ['#','Team','Gr.','Pkt','TD','Tore'].forEach(l=>
+    h+=`<th style="padding:5px 7px;text-align:${l==='Team'?'left':'center'};color:var(--txt3);font-size:.68em;text-transform:uppercase">${l}</th>`
+  );
+  h+=`</tr></thead><tbody>`;
+  allThirds.forEach((t,i)=>{
+    const qualified=assignedTeams.has(t.teamId);
+    const bg=qualified?'rgba(52,199,89,.05)':'';
+    h+=`<tr style="border-bottom:1px solid var(--bg4);background:${bg}">`;
+    h+=`<td style="padding:5px 7px;text-align:center;font-weight:700;color:${qualified?'var(--green)':'var(--txt3)'}">${i+1}</td>`;
+    h+=`<td style="padding:5px 7px">${TEAMS[t.teamId].flag} ${TEAMS[t.teamId].name}${qualified?'<span style="color:var(--green);margin-left:4px;font-size:.75em">✓</span>':''}</td>`;
+    h+=`<td style="padding:5px 7px;text-align:center;color:var(--txt3)">${t.g}</td>`;
+    h+=`<td style="padding:5px 7px;text-align:center;font-weight:600">${t.pts}</td>`;
+    h+=`<td style="padding:5px 7px;text-align:center">${t.gd>0?'+':''}${t.gd}</td>`;
+    h+=`<td style="padding:5px 7px;text-align:center">${t.gf}</td>`;
+    h+=`</tr>`;
+  });
+  h+=`</tbody></table></div>`;
   return h;
 }
 
@@ -1299,8 +1594,8 @@ function renderKOCard(m){
 
   // Input row
   if(!isLocked&&isKnown){
-    const vA=kr.goalsA!==''?kr.goalsA:(hasPred?pred.goalsA:'');
-    const vB=kr.goalsB!==''?kr.goalsB:(hasPred?pred.goalsB:'');
+    const vA=kr.goalsA!==''?String(kr.goalsA):'';
+    const vB=kr.goalsB!==''?String(kr.goalsB):'';
     const canLock=vA!==''&&vB!=='';
     const isDraw=canLock&&parseInt(vA)===parseInt(vB);
     h+=`<div class="ko-input-row">`;
@@ -1363,16 +1658,20 @@ function renderTeamRatings(){
 
 function renderElo(){
   let h=`<h2 style="color:var(--gold);margin-bottom:8px">Elo-Ratings aller 48 Teams</h2>`;
-  h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:16px">Manuelle Anpassung möglich. Grün/Rot zeigt die Veränderung gegenüber dem Basiswert (durch gesperrte Resultate).</p>`;
-  h+=`<div class="actions"><button class="btn btn-outline" id="resetElo">Alles auf Basiswerte zurücksetzen</button></div>`;
+  h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:4px">Manuelle Anpassung möglich. Das ± zeigt die Gesamtveränderung gegenüber dem Original-Basiswert — inkl. Spielergebnisse <em>und</em> Turnier-Motivation.</p>`;
+  h+=`<div class="info-box" style="margin-bottom:12px;font-size:.78em">`;
+  h+=`🏆 <strong>Turnier-Motivation</strong> fliesst ins Elo ein: Gruppensieger +20, Zweiter +8, ausgeschieden −20. `;
+  h+=`Jeder Sieg +8, jede Niederlage −6 (kumuliert). Positive Tordifferenz gibt Schwung. K.o.-Siege: 16tel +15 … Finale +60 Pkt.`;
+  h+=`</div>`;
+  h+=`<div class="actions"><button class="btn btn-outline" id="resetElo">Auf Original-Basiswerte zurücksetzen</button></div>`;
   h+=`<div class="elo-grid">`;
   TEAMS.forEach(t=>{
-    const d=t.elo-t.base;
+    const d=t.elo-t.defaultBase;
     const dc=d>0?'up':d<0?'down':'';
     const ds=d>0?`+${d}`:d<0?`${d}`:'±0';
     h+=`<div class="elo-item"><span class="flag">${t.flag}</span><span>${t.name}</span>`;
-    h+=`<span class="elo-diff ${dc}">${ds}</span>`;
-    h+=`<input type="number" step="10" min="1000" max="2500" value="${t.elo}" data-elo="${t.id}"></div>`;
+    h+=`<span class="elo-diff ${dc}" title="Basis: ${t.defaultBase} → Aktuell: ${t.elo}">${ds}</span>`;
+    h+=`<input type="number" step="10" min="1000" max="2800" value="${t.elo}" data-elo="${t.id}"></div>`;
   });
   h+=`</div>`;
   return h;
@@ -1683,24 +1982,6 @@ function renderBracketPage(){
   h+=`<span class="bl-real">✅ Gespielt</span>`;
   h+=`</div>`;
   h+=`<div id="bracketWrap"><canvas id="bracketCanvas"></canvas></div>`;
-  // Scale canvas to fit available width after render
-  h+=`<script>
-  (function scaleBracket(){
-    const wrap=document.getElementById('bracketWrap');
-    const cnv=document.getElementById('bracketCanvas');
-    if(!wrap||!cnv) return;
-    const avail=document.getElementById('main').offsetWidth-8;
-    const natural=parseInt(cnv.style.width)||cnv.width;
-    if(natural>avail){
-      const scale=avail/natural;
-      cnv.style.transform='scale('+scale+')';
-      wrap.style.height=(parseInt(cnv.style.height)*scale)+'px';
-    } else {
-      cnv.style.transform='';
-      wrap.style.height='';
-    }
-  })();
-  <\/script>`;
   return h;
 }
 
@@ -1813,9 +2094,22 @@ function renderBracket(){
     const m=KO_BRACKET.find(x=>x.id===mid);
     if(!m) return;
     [m.slotA, m.slotB].forEach((slot,si)=>{
-      if(slot.src!=='grp') return;
-      if(!grpSlotMap[slot.g]) grpSlotMap[slot.g]=[];
-      grpSlotMap[slot.g].push({r32mi, isSlotA:si===0, pos:slot.pos});
+      if(slot.src==='grp'){
+        if(!grpSlotMap[slot.g]) grpSlotMap[slot.g]=[];
+        grpSlotMap[slot.g].push({r32mi, isSlotA:si===0, pos:slot.pos});
+      } else if(slot.src==='grp3'){
+        const assignments = getThirdAssignments();
+        const si2 = si;
+        const teamId = assignments.get(m.id+'_'+si2);
+        if(teamId!=null){
+          const gi=GN.findIndex((_,i)=>{ const tb=calcTable(i); return tb[2]?.id===teamId; });
+          if(gi>=0){
+            const g=GN[gi];
+            if(!grpSlotMap[g]) grpSlotMap[g]=[];
+            grpSlotMap[g].push({r32mi, isSlotA:si===0, pos:3});
+          }
+        }
+      }
     });
   });
 
@@ -2093,8 +2387,7 @@ function bind(){
       const lockBtn=card?card.querySelector('.btn-lock.lock'):null;
       if(lockBtn) lockBtn.disabled=!bothFilled;
       save();
-      // Re-render table when both values are present (or cleared)
-      if(bothFilled||(!r.goalsA&&!r.goalsB)) render();
+      if(bothFilled||(!r.goalsA&&!r.goalsB)) renderWithFocus();
     });
   });
 
@@ -2126,7 +2419,11 @@ function bind(){
   document.querySelectorAll('[data-elo]').forEach(inp=>{
     inp.addEventListener('change',()=>{
       const id=parseInt(inp.dataset.elo);
-      TEAMS[id].elo=parseInt(inp.value);TEAMS[id].base=parseInt(inp.value);render();
+      // base = manuell gesetzter Startwert für recalcAllElos
+      // defaultBase = unveränderlicher Original-Wert für den Reset-Button
+      TEAMS[id].base=parseInt(inp.value);
+      TEAMS[id].elo=parseInt(inp.value);
+      render();
     });
   });
 
@@ -2188,6 +2485,15 @@ function bind(){
     for(let gi=0;gi<12;gi++)for(let i=0;i<6;i++){
       const k=`g${gi}_m${i}`,r=results[k];
       if(r&&r.goalsA!==''&&r.goalsB!==''&&!r.locked)r.locked=true;
+    }
+    render();
+  };
+
+  const ulag=document.getElementById('unlockAllGames');
+  if(ulag)ulag.onclick=()=>{
+    for(let gi=0;gi<12;gi++)for(let i=0;i<6;i++){
+      const k=`g${gi}_m${i}`,r=results[k];
+      if(r&&r.locked)r.locked=false;
     }
     render();
   };
@@ -2257,7 +2563,7 @@ function bind(){
 
   // Reset elo
   const re=document.getElementById('resetElo');
-  if(re)re.onclick=()=>{TEAMS.forEach(t=>{t.elo=t.base});results={};render()};
+  if(re)re.onclick=()=>{TEAMS.forEach(t=>{t.base=t.defaultBase;t.elo=t.defaultBase});recalcAllElos();render()};
 
   // Export
   const ex=document.getElementById('doExport');
@@ -2381,7 +2687,19 @@ function bind(){
       const v=inp.value===''?'':parseInt(inp.value);
       if(side==='A') koResults[id].goalsA=isNaN(v)?'':v;
       else           koResults[id].goalsB=isNaN(v)?'':v;
-      saveKO(); render();
+      // Update lock button without full re-render
+      const card=inp.closest('.ko-card');
+      const lockBtn=card?card.querySelector('.btn-lock.lock[data-ko]'):null;
+      if(lockBtn){
+        const kr=koResults[id];
+        lockBtn.disabled=!(kr.goalsA!==''&&kr.goalsB!=='');
+      }
+      saveKO();
+      // Only re-render when both fields are filled or both cleared
+      const kr=koResults[id];
+      const bothFilled=kr.goalsA!==''&&kr.goalsB!=='';
+      const bothEmpty=kr.goalsA===''&&kr.goalsB==='';
+      if(bothFilled||bothEmpty) renderWithFocus();
     });
   });
 
