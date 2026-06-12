@@ -224,11 +224,25 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 /* Twemoji */
 img.emoji{width:1.15em;height:1.15em;vertical-align:-0.18em;display:inline-block}
 .flag img.emoji{width:1.25em;height:1.25em}
+
+/* Scroll-to-top button */
+#scrollTopBtn{
+  position:fixed;bottom:24px;right:20px;z-index:999;
+  width:42px;height:42px;border-radius:50%;border:none;
+  background:var(--blue);color:#fff;font-size:1.2em;line-height:1;
+  box-shadow:0 4px 14px rgba(28,110,243,.40);
+  cursor:pointer;opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;
+  display:flex;align-items:center;justify-content:center;
+}
+#scrollTopBtn.visible{opacity:1;pointer-events:auto}
+#scrollTopBtn:hover{transform:translateY(-3px);background:var(--gold2)}
+#scrollTopBtn:active{transform:translateY(0)}
 </style>
 </head>
 <body>
 <div class="header">
-  <h1>⚽ DonTippspiel – WM 2026<span>Elo-Poisson · Live-Prognosen · Resultat-Tracking</span></h1>
+  <h1>⚽ DonTippspiel – WM 2026<span>PowerProfile v1 · Elo + Tempo/Balance · Live-Prognosen</span></h1>
 </div>
 <div class="tabs" id="tabs"></div>
 <div class="main" id="main"></div>
@@ -289,72 +303,59 @@ const TEAMS=[
 {id:47,name:'Panama',flag:'🇵🇦',elo:1690,base:1690},
 ];
 
-// atk = Angriffsstärke (Torerwartung-Multiplikator, 0.6–1.5)
-// def = Defensivstärke (je höher desto besser, senkt Gegentore, 0.6–1.4)
-// Basiert auf WM-Kaderqualität, Topscorern und defensiver Organisation
+// PowerProfile v1: aus öffentlichen Länderspielresultaten 2024-06-11 bis 2026-06-10 berechnet
+// goalRate = Tempo/Torreichtum; balance = gegnerbereinigte Offense/Defense-Korrektur auf Toranteil
 const TEAM_RATINGS=[
-  // Gruppe A
-  {atk:1.20,def:1.10}, // Mexiko — Lernkurve abwarten 😄
-  {atk:0.80,def:0.80}, // Südafrika
-  {atk:1.00,def:1.00}, // Südkorea
-  {atk:0.95,def:0.95}, // Tschechien
-  // Gruppe B
-  {atk:1.00,def:1.05}, // Kanada
-  {atk:0.90,def:0.85}, // Bosnien-Herzegowina
-  {atk:0.80,def:0.85}, // Katar
-  {atk:1.05,def:1.10}, // Schweiz
-  // Gruppe C
-  {atk:1.30,def:1.10}, // Brasilien
-  {atk:1.00,def:1.10}, // Marokko — kompakte Defensive
-  {atk:0.70,def:0.70}, // Haiti
-  {atk:0.95,def:0.95}, // Schottland
-  // Gruppe D
-  {atk:1.05,def:1.00}, // USA
-  {atk:0.85,def:1.00}, // Paraguay — traditionell defensiv stärker
-  {atk:0.90,def:0.95}, // Australien
-  {atk:1.10,def:1.00}, // Türkei
-  // Gruppe E
-  {atk:1.15,def:1.10}, // Deutschland
-  {atk:0.65,def:0.70}, // Curaçao
-  {atk:1.00,def:0.95}, // Elfenbeinküste
-  {atk:1.10,def:1.05}, // Ecuador — Elo-konsistent
-  // Gruppe F
-  {atk:1.20,def:1.10}, // Niederlande
-  {atk:1.10,def:1.05}, // Japan
-  {atk:1.00,def:1.00}, // Schweden
-  {atk:0.85,def:0.90}, // Tunesien
-  // Gruppe G
-  {atk:1.10,def:0.95}, // Belgien — eher offensiv geprägt
-  {atk:0.90,def:0.90}, // Ägypten
-  {atk:0.85,def:0.95}, // Iran
-  {atk:0.75,def:0.75}, // Neuseeland
-  // Gruppe H
-  {atk:1.35,def:1.15}, // Spanien — Extreme leicht gestaucht
-  {atk:0.75,def:0.80}, // Kap Verde
-  {atk:0.85,def:0.85}, // Saudi-Arabien
-  {atk:1.10,def:1.05}, // Uruguay
-  // Gruppe I
-  {atk:1.30,def:1.10}, // Frankreich
-  {atk:1.00,def:1.05}, // Senegal
-  {atk:0.80,def:0.80}, // Irak
-  {atk:1.20,def:1.00}, // Norwegen — Haaland+Ødegaard, offensiv stärker
-  // Gruppe J
-  {atk:1.35,def:1.10}, // Argentinien
-  {atk:0.90,def:0.90}, // Algerien
-  {atk:1.05,def:1.05}, // Österreich — aktuell stärker
-  {atk:0.75,def:0.80}, // Jordanien
-  // Gruppe K
-  {atk:1.20,def:1.05}, // Portugal
-  {atk:0.80,def:0.80}, // DR Kongo
-  {atk:0.80,def:0.85}, // Usbekistan
-  {atk:1.15,def:1.05}, // Kolumbien
-  // Gruppe L
-  {atk:1.25,def:1.10}, // England — Elo >2000
-  {atk:1.05,def:1.10}, // Kroatien
-  {atk:0.90,def:0.85}, // Ghana
-  {atk:0.80,def:0.85}, // Panama
+  {goalRate:0.895,balance:+0.019}, // Mexiko — Spiele:32, Off:1.02, Def:1.66, Tempo:0.83
+  {goalRate:1.012,balance:+0.016}, // Südafrika — Spiele:24, Off:1.24, Def:1.19, Tempo:1.08
+  {goalRate:0.998,balance:+0.013}, // Südkorea — Spiele:21, Off:1.18, Def:1.19, Tempo:1.04
+  {goalRate:1.135,balance:+0.005}, // Tschechien — Spiele:23, Off:1.27, Def:0.86, Tempo:1.24
+  {goalRate:0.898,balance:+0.018}, // Kanada — Spiele:29, Off:1.05, Def:1.57, Tempo:0.85
+  {goalRate:1.133,balance:+0.005}, // Bosnien-Herz. — Spiele:20, Off:1.23, Def:0.88, Tempo:1.19
+  {goalRate:1.160,balance:-0.018}, // Katar — Spiele:25, Off:0.95, Def:0.63, Tempo:1.26
+  {goalRate:1.101,balance:+0.017}, // Schweiz — Spiele:25, Off:1.40, Def:1.04, Tempo:1.20
+  {goalRate:1.016,balance:+0.008}, // Brasilien — Spiele:25, Off:1.08, Def:1.13, Tempo:1.00
+  {goalRate:1.037,balance:+0.048}, // Marokko — Spiele:35, Off:1.57, Def:2.64, Tempo:1.18
+  {goalRate:1.160,balance:+0.028}, // Haiti — Spiele:22, Off:1.82, Def:1.03, Tempo:1.45
+  {goalRate:1.100,balance:+0.006}, // Schottland — Spiele:23, Off:1.22, Def:0.92, Tempo:1.16
+  {goalRate:1.097,balance:-0.001}, // USA — Spiele:32, Off:1.14, Def:0.82, Tempo:1.18
+  {goalRate:0.928,balance:+0.010}, // Paraguay — Spiele:24, Off:1.05, Def:1.25, Tempo:0.91
+  {goalRate:0.988,balance:+0.020}, // Australien — Spiele:21, Off:1.21, Def:1.39, Tempo:0.99
+  {goalRate:1.158,balance:+0.017}, // Türkei — Spiele:25, Off:1.51, Def:0.96, Tempo:1.30
+  {goalRate:1.160,balance:+0.023}, // Deutschland — Spiele:25, Off:1.61, Def:1.06, Tempo:1.36
+  {goalRate:1.117,balance:+0.028}, // Curaçao — Spiele:22, Off:1.58, Def:1.25, Tempo:1.21
+  {goalRate:0.921,balance:+0.033}, // Elfenbeinküste — Spiele:25, Off:1.19, Def:2.07, Tempo:0.89
+  {goalRate:0.860,balance:+0.020}, // Ecuador — Spiele:26, Off:0.85, Def:2.41, Tempo:0.62
+  {goalRate:1.160,balance:+0.016}, // Niederlande — Spiele:26, Off:1.52, Def:0.93, Tempo:1.36
+  {goalRate:1.080,balance:+0.047}, // Japan — Spiele:20, Off:1.66, Def:2.02, Tempo:1.22
+  {goalRate:1.160,balance:+0.010}, // Schweden — Spiele:20, Off:1.49, Def:0.79, Tempo:1.41
+  {goalRate:0.994,balance:+0.007}, // Tunesien — Spiele:28, Off:1.08, Def:1.12, Tempo:1.01
+  {goalRate:1.160,balance:+0.014}, // Belgien — Spiele:24, Off:1.40, Def:0.97, Tempo:1.27
+  {goalRate:0.860,balance:+0.018}, // Ägypten — Spiele:28, Off:0.97, Def:1.74, Tempo:0.80
+  {goalRate:0.968,balance:+0.016}, // Iran — Spiele:19, Off:1.10, Def:1.39, Tempo:0.94
+  {goalRate:1.160,balance:+0.039}, // Neuseeland — Spiele:24, Off:2.02, Def:1.24, Tempo:1.48
+  {goalRate:1.160,balance:+0.026}, // Spanien — Spiele:27, Off:1.63, Def:1.12, Tempo:1.36
+  {goalRate:0.925,balance:+0.006}, // Kap Verde — Spiele:22, Off:0.97, Def:1.22, Tempo:0.89
+  {goalRate:0.925,balance:-0.005}, // Saudi-Arabien — Spiele:36, Off:0.84, Def:1.09, Tempo:0.87
+  {goalRate:0.860,balance:+0.005}, // Uruguay — Spiele:25, Off:0.80, Def:1.54, Tempo:0.72
+  {goalRate:1.059,balance:+0.011}, // Frankreich — Spiele:26, Off:1.21, Def:1.08, Tempo:1.10
+  {goalRate:0.997,balance:+0.033}, // Senegal — Spiele:27, Off:1.35, Def:1.75, Tempo:1.05
+  {goalRate:0.865,balance:-0.003}, // Irak — Spiele:28, Off:0.79, Def:1.24, Tempo:0.79
+  {goalRate:1.160,balance:+0.044}, // Norwegen — Spiele:20, Off:2.22, Def:1.27, Tempo:1.63
+  {goalRate:0.950,balance:+0.033}, // Argentinien — Spiele:26, Off:1.26, Def:1.90, Tempo:0.99
+  {goalRate:1.078,balance:+0.038}, // Algerien — Spiele:30, Off:1.52, Def:1.71, Tempo:1.17
+  {goalRate:1.129,balance:+0.024}, // Österreich — Spiele:23, Off:1.48, Def:1.19, Tempo:1.23
+  {goalRate:1.027,balance:+0.011}, // Jordanien — Spiele:32, Off:1.19, Def:1.08, Tempo:1.06
+  {goalRate:1.151,balance:+0.018}, // Portugal — Spiele:26, Off:1.41, Def:1.08, Tempo:1.23
+  {goalRate:0.860,balance:+0.025}, // DR Kongo — Spiele:24, Off:1.01, Def:2.00, Tempo:0.77
+  {goalRate:0.871,balance:+0.011}, // Usbekistan — Spiele:21, Off:0.91, Def:1.57, Tempo:0.77
+  {goalRate:1.073,balance:+0.020}, // Kolumbien — Spiele:27, Off:1.37, Def:1.16, Tempo:1.15
+  {goalRate:0.944,balance:+0.029}, // England — Spiele:27, Off:1.26, Def:1.71, Tempo:1.02
+  {goalRate:1.133,balance:+0.010}, // Kroatien — Spiele:23, Off:1.33, Def:0.91, Tempo:1.25
+  {goalRate:0.977,balance:+0.006}, // Ghana — Spiele:20, Off:1.04, Def:1.11, Tempo:0.98
+  {goalRate:1.149,balance:+0.005}, // Panama — Spiele:31, Off:1.25, Def:0.86, Tempo:1.22
 ];
-const DEFAULT_RATINGS=TEAM_RATINGS.map(r=>({atk:r.atk,def:r.def}));
+const DEFAULT_RATINGS=TEAM_RATINGS.map(r=>({goalRate:r.goalRate,balance:r.balance}));
 const GN=['A','B','C','D','E','F','G','H','I','J','K','L'];
 // defaultBase = unveränderlicher Original-Elo für den Reset-Button
 TEAMS.forEach(t=>t.defaultBase=t.base);
@@ -654,6 +655,106 @@ function resolveSlot(slot, koOverride){
   }
 }
 
+// resolveSlot variant that only uses locked results — no predictions, no calcTable fallback
+function groupLockedCount(gi){
+  let n=0;
+  for(let md=0;md<3;md++) for(let mi=0;mi<2;mi++){
+    const r=results[`g${gi}_m${md*2+mi}`];
+    if(r&&r.locked) n++;
+  }
+  return n;
+}
+function groupFullyLocked(gi){ return groupLockedCount(gi)===6; }
+function groupHasAnyLocked(gi){ return groupLockedCount(gi)>0; }
+
+function getThirdAssignmentsLocked(){
+  // Like getThirdAssignments but only uses locked results (partial standings OK)
+  const allThirds = GN.map((g,gi)=>{
+    if(!groupHasAnyLocked(gi)) return null;
+    const tb=calcTableLocked(gi);
+    const t=tb[2];
+    if(!t||t.played===0) return null;
+    return {teamId:t.id, g, pts:t.pts, gd:t.gd, gf:t.gf};
+  }).filter(Boolean).sort((a,b)=>
+    b.pts-a.pts || b.gd-a.gd || b.gf-a.gf ||
+    TEAMS[b.teamId].elo - TEAMS[a.teamId].elo
+  );
+
+  const slots = [];
+  KO_BRACKET.forEach(m=>{
+    [m.slotA, m.slotB].forEach((slot,si)=>{
+      if(slot.src==='grp3') slots.push({key:m.id+'_'+si, groups:slot.groups});
+    });
+  });
+
+  let bestScore = Infinity;
+  let bestAssigned = new Map();
+
+  function backtrack(slotIdx, usedTeams, currentScore, currentAssigned){
+    if(slotIdx === slots.length){
+      if(currentScore < bestScore){ bestScore=currentScore; bestAssigned=new Map(currentAssigned); }
+      return;
+    }
+    const slot = slots[slotIdx];
+    if(currentScore >= bestScore) return;
+    for(let rank=0; rank<allThirds.length; rank++){
+      const t = allThirds[rank];
+      if(usedTeams.has(t.teamId)) continue;
+      if(!slot.groups.includes(t.g)) continue;
+      currentAssigned.set(slot.key, t.teamId);
+      usedTeams.add(t.teamId);
+      backtrack(slotIdx+1, usedTeams, currentScore+rank, currentAssigned);
+      currentAssigned.delete(slot.key);
+      usedTeams.delete(t.teamId);
+    }
+  }
+  backtrack(0, new Set(), 0, new Map());
+  return bestAssigned;
+}
+
+function resolveSlotLocked(slot, koOverride){
+  const KR = koOverride || koResults;
+  if(slot.src==='grp'){
+    const gi=GN.indexOf(slot.g);
+    if(!groupHasAnyLocked(gi)) return null;
+    const tb=calcTableLocked(gi);
+    const entry=tb[slot.pos-1];
+    if(!entry||entry.played===0) return null;
+    // Only return if fully locked (position is final) OR team has played all possible games
+    // to have this position secured
+    if(groupFullyLocked(gi)) return entry.id;
+    // Partially played: only show if team has enough pts to be unambiguous
+    // Safe rule: show if all 6 matches locked, otherwise show (partial standings are useful too)
+    return entry.id;
+  }
+  if(slot.src==='grp3'){
+    // Only resolve if enough groups are fully locked to determine best thirds
+    const assignments = getThirdAssignmentsLocked();
+    const m = KO_BRACKET.find(x=>x.slotA===slot||x.slotB===slot);
+    if(!m) return null;
+    const si = m.slotA===slot ? 0 : 1;
+    return assignments.get(m.id+'_'+si) ?? null;
+  }
+  // src === 'ko'
+  const kr = KR[slot.id];
+  if(!kr||!kr.locked) return null;
+  const m=KO_BRACKET.find(x=>x.id===slot.id);
+  if(!m) return null;
+  const tA=resolveSlotLocked(m.slotA, KR), tB=resolveSlotLocked(m.slotB, KR);
+  if(tA===null||tB===null) return null;
+  if(slot.w){
+    if(kr.goalsA>kr.goalsB) return tA;
+    if(kr.goalsB>kr.goalsA) return tB;
+    if(kr.pens==='A') return tA;
+    if(kr.pens==='B') return tB;
+    return null;
+  } else {
+    if(kr.goalsA>kr.goalsB) return tB;
+    if(kr.goalsB>kr.goalsA) return tA;
+    return null;
+  }
+}
+
 // ============================================================
 // PRE-COMPUTE ALL KO PREDICTIONS
 // ============================================================
@@ -720,7 +821,7 @@ function computeKOPredictions(){
       const tAid=resolveForPred(m.slotA);
       const tBid=resolveForPred(m.slotB);
       if(tAid===null||tBid===null) continue;
-      const pr=predictMatch(tAid,tBid);
+      const pr=predictMatchExt(tAid,tBid);
       let gA=pr.goalsA, gB=pr.goalsB;
       // KO: no draws in predictions
       if(gA===gB){ if(pr.pW>=pr.pL) gA++; else gB++; }
@@ -736,11 +837,61 @@ function computeKOPredictions(){
 // ============================================================
 // ENGINE — optimierte Defaults
 // ============================================================
-const SAVE_VERSION = 4; // Erhöhen wenn P-Defaults sich ändern → P wird zurückgesetzt, Tipps bleiben
+const SAVE_VERSION = 6; // Erhöhen wenn P-Defaults sich ändern → P wird zurückgesetzt, Tipps bleiben
 let P={baseGoals:1.25,eloFactor:380,hostBoost:65,homeBoost:0,kFactor:20};
 
 function fac(n){let f=1;for(let i=2;i<=n;i++)f*=i;return f}
 function ppf(k,l){return l<=0?(k===0?1:0):Math.pow(l,k)*Math.exp(-l)/fac(k)}
+
+function scoreLines(lA,lB,maxGoals=7){
+  const rows=[];
+  for(let a=0;a<=maxGoals;a++) for(let b=0;b<=maxGoals;b++){
+    rows.push({a,b,p:ppf(a,lA)*ppf(b,lB)});
+  }
+  rows.sort((x,y)=>y.p-x.p);
+  return rows;
+}
+
+// Liefert nicht blind die mathematisch häufigste Scoreline, sondern einen
+// kalibrierten Standardtipp: Outcome aus der Verteilung, Torhöhe aus λ+Tempo.
+// Dadurch bleiben Tipps plausibel, aber nicht künstlich auf 1:0/2:0/2:1 fixiert.
+function chooseStandardScore(lA,lB,pW,pD,pL,pace=1){
+  const total=lA+lB;
+  const outcome = pW>=pD && pW>=pL ? 'W' : pD>=pW && pD>=pL ? 'D' : 'L';
+  let targetTotal = Math.round(total);
+  if(pace>1.08 && total>2.30) targetTotal=Math.ceil(total);
+  if(pace>1.14 && total>2.65) targetTotal=Math.min(5, Math.ceil(total+.35));
+  if(pace<0.94 && total<2.80) targetTotal=Math.floor(total);
+  targetTotal=clamp(targetTotal, outcome==='D'?0:1, 6);
+
+  let best=null, bestVal=-Infinity;
+  for(const s of scoreLines(lA,lB,7)){
+    const valid = outcome==='W' ? s.a>s.b : outcome==='D' ? s.a===s.b : s.a<s.b;
+    if(!valid) continue;
+    let val = Math.log(s.p+1e-12);
+    val -= 0.58*Math.abs((s.a+s.b)-targetTotal);
+    val -= 0.22*(Math.abs(s.a-lA)+Math.abs(s.b-lB));
+
+    // Favorit mit klar niedriger Gegner-λ soll eher zu Null tippen.
+    if(lA>lB){
+      if(lB<0.75 && s.b>0) val-=0.65;
+      if(lA>1.75 && s.a<2) val-=0.35;
+    }else{
+      if(lA<0.75 && s.a>0) val-=0.65;
+      if(lB>1.75 && s.b<2) val-=0.35;
+    }
+    // Offene Spiele dürfen nicht künstlich auf 1:0/1:1 zusammenfallen.
+    if(pace>1.10 && total>2.35 && (s.a+s.b)<3) val-=0.35;
+    if(pace<0.92 && (s.a+s.b)>2) val-=0.40;
+
+    if(val>bestVal){ bestVal=val; best=s; }
+  }
+  return best || scoreLines(lA,lB,7)[0] || {a:1,b:0,p:0};
+}
+
+function topScoreText(lA,lB,n=5){
+  return scoreLines(lA,lB,7).slice(0,n).map(x=>`${x.a}:${x.b} ${(x.p*100).toFixed(1)}%`).join(' · ');
+}
 
 function effElo(id){return TEAMS[id].elo+(HOST_IDS.includes(id)?P.hostBoost:0)}
 
@@ -753,29 +904,9 @@ function predictMatch(idA,idB){
     const p=ppf(a,lA)*ppf(b,lB);
     if(a>b)pW+=p;else if(a===b)pD+=p;else pL+=p;
   }
-  // Kategorie-basiertes Scoring: λ-Stärke → realistische Ergebnisse
-  const strong=lA>=lB;
-  const lS=Math.max(lA,lB), lW=Math.min(lA,lB), ld=lS-lW;
-  // Tore Favorit
-  let gS;
-  if(lS<1.55)gS=1;
-  else if(lS<2.05)gS=2;
-  else if(lS<2.6)gS=3;
-  else gS=Math.round(lS);
-  // Tore Underdog
-  let gW;
-  if(lW<0.5)gW=0;
-  else if(lW<0.85)gW=0;
-  else gW=1;
-  // Gleichstand auflösen
-  if(gS===gW){
-    if(ld>=0.3)gS++;                    // klarer Favorit → Sieg +2 (z.B. 2:1)
-    else if(ld>=0.1)gW=Math.max(0,gW-1);// leichter Favorit → Sieg +1 (z.B. 1:0)
-    // sonst: Unentschieden (ld<0.1, sehr ausgeglichen)
-  }
-  const gA=strong?gS:gW, gB=strong?gW:gS;
-  const pExact=ppf(gA,lA)*ppf(gB,lB);
-  return{goalsA:gA,goalsB:gB,lA,lB,pW,pD,pL,pExact};
+  const tip=chooseStandardScore(lA,lB,pW,pD,pL,1);
+  const gA=tip.a, gB=tip.b;
+  return{goalsA:gA,goalsB:gB,lA,lB,pW,pD,pL,pExact:tip.p,topScores:topScoreText(lA,lB)};
 }
 
 // Zieht ein realistisches Ergebnis aus der vollen Poisson-Verteilung.
@@ -797,39 +928,38 @@ function sampleMatch(idA, idB){
   return {goalsA:1, goalsB:0}; // Fallback
 }
 
-// Erweiterte Prognose: Elo-Basis × Angriffs-/Defensivwerte
+// Erweiterte Prognose: Elo-Basis × Goal-Profile
+// Elo bestimmt die Grundstärke. goalRate verändert nur die erwartete Gesamt-Torzahl,
+// balance verschiebt nur den Toranteil zwischen den Teams. Dadurch wird Stärke nicht doppelt gezählt.
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
 function predictMatchExt(idA, idB){
   const rA=TEAM_RATINGS[idA], rB=TEAM_RATINGS[idB];
   const diff=(effElo(idA)-effElo(idB)+P.homeBoost)/P.eloFactor;
   const lAbase=Math.max(.15, P.baseGoals+diff/2);
   const lBbase=Math.max(.15, P.baseGoals-diff/2);
-  // Multiplikator: atk × (2 - def_gegner), zentriert um 1.0, begrenzt auf 0.5–1.5
-  const mA = Math.min(1.5, Math.max(0.5, rA.atk * (2 - rB.def)));
-  const mB = Math.min(1.5, Math.max(0.5, rB.atk * (2 - rA.def)));
-  const lA = Math.max(.15, Math.min(4.0, lAbase * mA));
-  const lB = Math.max(.15, Math.min(4.0, lBbase * mB));
+
+  const baseTotal = lAbase + lBbase;
+  const baseShareA = lAbase / Math.max(baseTotal, .1);
+
+  // Torprofil: beide Teams beeinflussen gemeinsam, ob das Spiel eher offen oder geschlossen wird.
+  const pace = clamp(Math.sqrt((rA.goalRate||1) * (rB.goalRate||1)), .80, 1.25);
+
+  // Balance: kleine Stil-Korrektur auf den Toranteil, nicht auf die Gesamtstärke.
+  const shareA = clamp(baseShareA + (rA.balance||0) - (rB.balance||0), .20, .80);
+  const totalGoals = clamp(baseTotal * pace, .40, 5.20);
+
+  const lA = clamp(totalGoals * shareA, .15, 4.0);
+  const lB = clamp(totalGoals * (1-shareA), .15, 4.0);
+
   let pW=0,pD=0,pL=0;
   for(let a=0;a<=7;a++) for(let b=0;b<=7;b++){
     const p=ppf(a,lA)*ppf(b,lB);
     if(a>b)pW+=p; else if(a===b)pD+=p; else pL+=p;
   }
-  // Wahrscheinlichsten Ausgang bestimmen (S/U/N)
-  const outcome = pW>=pD && pW>=pL ? 'W' : pD>=pW && pD>=pL ? 'D' : 'L';
-  // Score: am nächsten am Erwartungswert (round λ), aber innerhalb des richtigen Ausgangs
-  // Damit gibt λ=1.89 → 2 Tore, nicht 1
-  const expA=Math.round(lA), expB=Math.round(lB);
-  let bestScore=null, bestDist=Infinity;
-  for(let a=0;a<=6;a++) for(let b=0;b<=6;b++){
-    const valid = outcome==='W'?a>b : outcome==='D'?a===b : a<b;
-    if(!valid) continue;
-    const dist = Math.abs(a-expA) + Math.abs(b-expB);
-    const p = ppf(a,lA)*ppf(b,lB);
-    if(dist<bestDist || (dist===bestDist && p>(bestScore?.p||0))){
-      bestDist=dist; bestScore={a,b,p};
-    }
-  }
-  const gA=bestScore?.a??1, gB=bestScore?.b??0;
-  return{goalsA:gA,goalsB:gB,lA,lB,pW,pD,pL,pExact:ppf(gA,lA)*ppf(gB,lB)};
+
+  const tip=chooseStandardScore(lA,lB,pW,pD,pL,pace);
+  const gA=tip.a, gB=tip.b;
+  return{goalsA:gA,goalsB:gB,lA,lB,pW,pD,pL,pExact:tip.p,pace,shareA,topScores:topScoreText(lA,lB)};
 }
 
 function updateEloSingle(idA,idB,gA,gB){
@@ -852,7 +982,7 @@ function updateEloSingle(idA,idB,gA,gB){
 function recalcAllElos(){
   TEAMS.forEach(t=>t.elo=t.base);
   // Team-Stärken auf Basis-Werte zurücksetzen vor Neuberechnung
-  TEAM_RATINGS.forEach((r,i)=>{ r.atk=DEFAULT_RATINGS[i].atk; r.def=DEFAULT_RATINGS[i].def; });
+  TEAM_RATINGS.forEach((r,i)=>{ r.goalRate=DEFAULT_RATINGS[i].goalRate; r.balance=DEFAULT_RATINGS[i].balance; });
   for(let md=0;md<3;md++){
     for(let gi=0;gi<12;gi++){
       for(let mi=0;mi<2;mi++){
@@ -861,8 +991,9 @@ function recalcAllElos(){
         if(r&&r.locked){
           const tids=GROUPS[gi];
           const[hi,ai]=MDS[md][mi];
+          const prePred = predictMatchExt(tids[hi],tids[ai]); // Erwartung vor dem Spielzustands-Update
+          updateTeamRatings(tids[hi],tids[ai],r.goalsA,r.goalsB,prePred.lA,prePred.lB);
           updateEloSingle(tids[hi],tids[ai],r.goalsA,r.goalsB);
-          updateTeamRatings(tids[hi],tids[ai],r.goalsA,r.goalsB);
         }
       }
     }
@@ -870,48 +1001,26 @@ function recalcAllElos(){
   applyMotivationBonus();
 }
 
-// Passt atk/def der Teams an basierend auf Über-/Unterperformance
-// gegenüber der Erwartung (λ aus Poisson-Modell zum Zeitpunkt des Spiels).
-// Lernrate klein damit ein Spiel nicht alles umwirft.
-function updateTeamRatings(idA, idB, gA, gB){
-  const LEARN = 0.06; // Lernrate: 6% pro Spiel (erhöht für kurzes Turnier)
-
-  // Erwartete Tore zum Zeitpunkt des Spiels (aktuelles Elo + aktuelle Ratings)
-  const pred = predictMatchExt(idA, idB);
-  const expA = pred.lA; // erwartete Tore Team A
-  const expB = pred.lB; // erwartete Tore Team B
-
+// Passt goalRate/balance der Teams an basierend auf Über-/Unterperformance
+// gegenüber der Erwartung vor dem Spiel.
+function updateTeamRatings(idA, idB, gA, gB, expA, expB){
+  const LEARN = 0.06;
   const gAn = parseInt(gA), gBn = parseInt(gB);
+  const expTotal = Math.max(.8, expA + expB);
+  const actTotal = gAn + gBn;
 
-  // Relative Abweichung von der Erwartung (begrenzt auf ±50% pro Spiel)
-  const diffA = Math.max(-0.5, Math.min(0.5, (gAn - expA) / Math.max(expA, 0.5)));
-  const diffB = Math.max(-0.5, Math.min(0.5, (gBn - expB) / Math.max(expB, 0.5)));
+  // goalRate lernt nur: war das Spiel torreicher/torärmer als erwartet?
+  const totalDiff = clamp((actTotal - expTotal) / expTotal, -0.50, 0.50);
+  TEAM_RATINGS[idA].goalRate = clamp(TEAM_RATINGS[idA].goalRate + LEARN * totalDiff * 0.50, .85, 1.18);
+  TEAM_RATINGS[idB].goalRate = clamp(TEAM_RATINGS[idB].goalRate + LEARN * totalDiff * 0.50, .85, 1.18);
 
-  // Angriff-Update: eigene Tore vs. Erwartung, gewichtet durch gegnerische Defense
-  // Starke gegnerische Defense → grössere Auswirkung bei Über/Unterperformance
-  const defWeightB = TEAM_RATINGS[idB].def; // Defensive des Gegners
-  const defWeightA = TEAM_RATINGS[idA].def;
-
-  TEAM_RATINGS[idA].atk = Math.max(0.3, Math.min(2.0,
-    TEAM_RATINGS[idA].atk + LEARN * diffA * defWeightB
-  ));
-  TEAM_RATINGS[idB].atk = Math.max(0.3, Math.min(2.0,
-    TEAM_RATINGS[idB].atk + LEARN * diffB * defWeightA
-  ));
-
-  // Defense-Update: Gegentore relativ zur Erwartung des Gegners
-  // diffA > 0 (Gegner traf mehr als erwartet) → eigene Defense sinkt
-  // diffA < 0 (Gegner traf weniger als erwartet) → eigene Defense steigt
-  // Gewichtet durch gegnerischen Angriffswert
-  const atkWeightA = TEAM_RATINGS[idA].atk;
-  const atkWeightB = TEAM_RATINGS[idB].atk;
-
-  TEAM_RATINGS[idB].def = Math.max(0.3, Math.min(2.0,
-    TEAM_RATINGS[idB].def - LEARN * diffA * atkWeightA
-  ));
-  TEAM_RATINGS[idA].def = Math.max(0.3, Math.min(2.0,
-    TEAM_RATINGS[idA].def - LEARN * diffB * atkWeightB
-  ));
+  // balance lernt nur: hat Team A einen höheren/niedrigeren Toranteil erreicht als erwartet?
+  // 0.35 glättet 0-Tore-Spiele, damit 1 einzelnes 0:0 nicht extrem wirkt.
+  const expShareA = expA / Math.max(expA + expB, .1);
+  const actShareA = (gAn + .35) / Math.max(actTotal + .70, .70);
+  const shareDiff = clamp(actShareA - expShareA, -0.35, 0.35);
+  TEAM_RATINGS[idA].balance = clamp(TEAM_RATINGS[idA].balance + LEARN * shareDiff, -.10, .10);
+  TEAM_RATINGS[idB].balance = clamp(TEAM_RATINGS[idB].balance - LEARN * shareDiff, -.10, .10);
 }
 
 // Turnier-Motivation: Bonus/Malus basierend auf Gruppenphase-Verlauf
@@ -1004,6 +1113,8 @@ let results={}; // key → {goalsA, goalsB, locked}
 let activeTab='overview';
 let paramsOpen=false;
 let overviewLockedOnly=false; // Toggle: nur gesperrte Resultate in Gruppenübersicht
+let bracketLockedOnly=false;   // Toggle: nur gesperrte Resultate im Turnierbaum
+let selectedBracketGroup=null;  // Highlighted group in bracket view
 let apiToken='';
 let apiStatus=null; // null | 'ok' | 'error' | 'loading'
 let apiStatusMsg='';
@@ -1012,7 +1123,7 @@ let apiUpdating=false;
 
 function save(){
   try{
-    const ratings=TEAM_RATINGS.map(r=>({atk:r.atk,def:r.def}));
+    const ratings=TEAM_RATINGS.map(r=>({goalRate:r.goalRate,balance:r.balance}));
     localStorage.setItem('wm26ts',JSON.stringify({v:SAVE_VERSION,results,koResults,P,apiLastUpdate,ratings}))
   }catch(e){}
 }
@@ -1025,7 +1136,7 @@ function load(){
       if(s.P && s.v===SAVE_VERSION)Object.assign(P,s.P);
       if(s.apiLastUpdate)apiLastUpdate=s.apiLastUpdate;
       if(s.ratings && s.v===SAVE_VERSION)
-        s.ratings.forEach((r,i)=>{if(TEAM_RATINGS[i]){TEAM_RATINGS[i].atk=r.atk;TEAM_RATINGS[i].def=r.def;}});
+        s.ratings.forEach((r,i)=>{if(TEAM_RATINGS[i]){TEAM_RATINGS[i].goalRate=r.goalRate??r.atk??TEAM_RATINGS[i].goalRate;TEAM_RATINGS[i].balance=r.balance??0;}});
     }
     recalcAllElos();
   }catch(e){}
@@ -1054,7 +1165,7 @@ function calcTable(gi){
         gA=r.goalsA;gB=r.goalsB;
       } else {
         // Kein Tipp → Modell-Prognose
-        const p=predictMatch(hid,aid);gA=p.goalsA;gB=p.goalsB;
+        const p=predictMatchExt(hid,aid);gA=p.goalsA;gB=p.goalsB;
       }
       const h=tb[lk[hid]],a=tb[lk[aid]];
       h.gf+=gA;h.ga+=gB;a.gf+=gB;a.ga+=gA;
@@ -1237,7 +1348,7 @@ function renderAllGames(){
   h+=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">`;
   h+=`<span style="font-size:.72em;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-right:2px">Übernehmen:</span>`;
   h+=`<button class="btn btn-outline" id="fillAllGamesElo" style="font-size:.8em">Elo-Modell</button>`;
-  h+=`<button class="btn btn-gold" id="fillAllGamesExt" style="font-size:.8em">Elo + Stärken</button>`;
+  h+=`<button class="btn btn-gold" id="fillAllGamesExt" style="font-size:.8em">Modell-Tipp</button>`;
   h+=`<span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>`;
   h+=`<button class="btn" id="lockAllGames" style="background:var(--green);color:#fff;font-size:.8em">🔒 Alle sperren</button>`;
   h+=`<button class="btn btn-outline" id="unlockAllGames" style="border-color:var(--red);color:var(--red);font-size:.8em">🔓 Sperren entfernen</button>`;
@@ -1308,10 +1419,11 @@ function renderAllGames(){
       h+=`<div class="pred-divider"></div>`;
       const changed=pred.goalsA!==predExt.goalsA||pred.goalsB!==predExt.goalsB;
       h+=`<div class="pred-col pred-col-ext">`;
-      h+=`<div class="pred-col-label">Elo + Stärken</div>`;
+      h+=`<div class="pred-col-label">Modell-Tipp</div>`;
       h+=`<div class="pred-col-score ${changed?'pred-col-score-diff':''}">${predExt.goalsA}<span class="sep">:</span>${predExt.goalsB}</div>`;
       h+=`<div class="pred-col-meta"><span>S ${(predExt.pW*100).toFixed(0)}%</span><span>U ${(predExt.pD*100).toFixed(0)}%</span><span>N ${(predExt.pL*100).toFixed(0)}%</span></div>`;
       h+=`<div class="pred-col-detail">λ ${predExt.lA.toFixed(2)} – ${predExt.lB.toFixed(2)}</div>`;
+      h+=`<div class="pred-col-detail">Top: ${predExt.topScores}</div>`;
       h+=`<button class="pred-take-btn pred-take-ext" data-key="${m.key}" data-a="${predExt.goalsA}" data-b="${predExt.goalsB}">↙ Übernehmen</button>`;
       h+=`</div>`;
       h+=`</div>`;
@@ -1325,7 +1437,7 @@ function renderAllGames(){
       h+=`<button class="btn-lock lock" data-key="${m.key}" ${canLock?'':'disabled'}>🔒 Sperren</button>`;
       h+=`</div>`;
     }else{
-      h+=`<div class="pred-was">Elo: ${pred.goalsA}:${pred.goalsB} · Stärken: ${predExt.goalsA}:${predExt.goalsB}</div>`;
+      h+=`<div class="pred-was">Elo: ${pred.goalsA}:${pred.goalsB} · Modell: ${predExt.goalsA}:${predExt.goalsB}</div>`;
       h+=`<div style="text-align:center;margin-top:8px"><button class="btn-lock unlock" data-key="${m.key}">🔓 Entsperren</button></div>`;
     }
 
@@ -1411,7 +1523,7 @@ function renderGroup(gi){
         // Col 2: Erweiterte Prognose
         const changed=pred.goalsA!==predExt.goalsA||pred.goalsB!==predExt.goalsB;
         h+=`<div class="pred-col pred-col-ext">`;
-        h+=`<div class="pred-col-label">Elo + Stärken</div>`;
+        h+=`<div class="pred-col-label">Modell-Tipp</div>`;
         h+=`<div class="pred-col-score ${changed?'pred-col-score-diff':''}">${predExt.goalsA}<span class="sep">:</span>${predExt.goalsB}</div>`;
         h+=`<div class="pred-col-meta">`;
         h+=`<span>S ${(predExt.pW*100).toFixed(0)}%</span>`;
@@ -1419,6 +1531,7 @@ function renderGroup(gi){
         h+=`<span>N ${(predExt.pL*100).toFixed(0)}%</span>`;
         h+=`</div>`;
         h+=`<div class="pred-col-detail">λ ${predExt.lA.toFixed(2)} – ${predExt.lB.toFixed(2)}</div>`;
+      h+=`<div class="pred-col-detail">Top: ${predExt.topScores}</div>`;
         h+=`<button class="pred-take-btn pred-take-ext" data-key="${key}" data-a="${predExt.goalsA}" data-b="${predExt.goalsB}">↙ Übernehmen</button>`;
         h+=`</div>`;
 
@@ -1436,7 +1549,7 @@ function renderGroup(gi){
         h+=`<button class="btn-lock lock" data-key="${key}" ${canLock?'':'disabled'}>🔒 Sperren</button>`;
         h+=`</div>`;
       } else {
-        h+=`<div class="pred-was">Elo-Prognose: ${pred.goalsA}:${pred.goalsB} · Stärken-Prognose: ${predExt.goalsA}:${predExt.goalsB}</div>`;
+        h+=`<div class="pred-was">Elo-Prognose: ${pred.goalsA}:${pred.goalsB} · Modell-Prognose: ${predExt.goalsA}:${predExt.goalsB}</div>`;
         h+=`<div style="text-align:center;margin-top:8px">`;
         h+=`<button class="btn-lock unlock" data-key="${key}">🔓 Entsperren</button></div>`;
       }
@@ -1449,7 +1562,7 @@ function renderGroup(gi){
   // Actions
   h+=`<div class="actions">`;
   h+=`<button class="btn btn-gold" id="fillAll" data-gi="${gi}">Elo-Prognose übernehmen</button>`;
-  h+=`<button class="btn btn-gold" id="fillAllExt" data-gi="${gi}" style="background:var(--blue)">Elo+Stärken übernehmen</button>`;
+  h+=`<button class="btn btn-gold" id="fillAllExt" data-gi="${gi}" style="background:var(--blue)">Modell-Tipps übernehmen</button>`;
   h+=`<button class="btn btn-outline" id="lockAll" data-gi="${gi}">Alle sperren</button>`;
   h+=`<button class="btn btn-outline" style="border-color:var(--red);color:var(--red)" id="clearGrp" data-gi="${gi}">Zurücksetzen</button>`;
   h+=`</div>`;
@@ -1680,11 +1793,12 @@ function renderKOCard(m){
     h+=`<div class="pred-divider"></div>`;
 
     h+=`<div class="pred-col pred-col-ext">`;
-    h+=`<div class="pred-col-label">Elo + Stärken</div>`;
+    h+=`<div class="pred-col-label">Modell-Tipp</div>`;
     if(predExt){
       h+=`<div class="pred-col-score ${changed?'pred-col-score-diff':''}">${predExt.goalsA}<span class="sep">:</span>${predExt.goalsB}</div>`;
       h+=`<div class="pred-col-meta"><span>S ${(predExt.pW*100).toFixed(0)}%</span><span>U ${(predExt.pD*100).toFixed(0)}%</span><span>N ${(predExt.pL*100).toFixed(0)}%</span></div>`;
       h+=`<div class="pred-col-detail">λ ${predExt.lA.toFixed(2)} – ${predExt.lB.toFixed(2)}</div>`;
+      h+=`<div class="pred-col-detail">Top: ${predExt.topScores}</div>`;
       h+=`<button class="pred-take-btn pred-take-ext" data-ko="${m.id}" data-a="${predExt.goalsA}" data-b="${predExt.goalsB}">↙ Übernehmen</button>`;
     }else{
       h+=`<div class="pred-col-score" style="font-size:1em;color:var(--txt3)">–</div>`;
@@ -1731,18 +1845,17 @@ function renderKOCard(m){
 }
 
 function renderTeamRatings(){
-  let h=`<h2 style="font-weight:700;letter-spacing:-.2px;margin-bottom:4px">🎯 Team-Stärken</h2>`;
-  h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:6px">Angriffs- und Defensivwerte fliessen in die erweiterte Prognose ein. <strong>Angriff</strong> = Torerwartungs-Multiplikator (1.0 = Durchschnitt). <strong>Defense</strong> = Gegentore-Widerstand (höher = besser).</p>`;
+  let h=`<h2 style="font-weight:700;letter-spacing:-.2px;margin-bottom:4px">🎯 Team-Profile</h2>`;
+  h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:6px"><strong>GoalRate</strong> steuert nur, ob Spiele eines Teams eher torreich oder torarm werden. <strong>Balance</strong> verschiebt den Toranteil leicht zugunsten/zulasten des Teams. Elo bleibt die eigentliche Stärke.</p>`;
   h+=`<div class="info-box" style="margin-bottom:12px;font-size:.78em">`;
-  h+=`🔄 <strong>Auto-Update:</strong> Nach gesperrten Spielen werden die Werte automatisch angepasst — basierend auf Über-/Unterperformance gegenüber der Erwartung, gewichtet durch die Stärke des Gegners. `;
-  h+=`Viele Tore gegen eine starke Defense → grosser Angriffs-Bonus. Wenig Gegentore gegen einen starken Angriff → grosser Defense-Bonus.`;
+  h+=`🔄 <strong>Auto-Update:</strong> Nach gesperrten Spielen lernt GoalRate aus Gesamt-Toren vs. Erwartung und Balance aus Toranteil vs. Erwartung. Gegnerstärke steckt bereits in λ vor dem Spiel.`;
   h+=`</div>`;
-  h+=`<div class="actions"><button class="btn btn-outline" id="resetRatings">Auf Standardwerte zurücksetzen</button></div>`;
+  h+=`<div class="actions"><button class="btn btn-outline" id="resetRatings">Auf Standardprofile zurücksetzen</button></div>`;
   h+=`<div class="elo-grid">`;
   TEAMS.forEach(t=>{
     const rt=TEAM_RATINGS[t.id];
     const dr=DEFAULT_RATINGS[t.id];
-    const dAtk=rt.atk-dr.atk, dDef=rt.def-dr.def;
+    const dGoal=rt.goalRate-dr.goalRate, dBal=rt.balance-dr.balance;
     const fmtDelta=(d)=>d>0.005?`<span style="color:var(--green);font-size:.65em">▲${d.toFixed(2)}</span>`:
                         d<-0.005?`<span style="color:var(--red);font-size:.65em">▼${Math.abs(d).toFixed(2)}</span>`:
                         `<span style="color:var(--txt3);font-size:.65em">±0</span>`;
@@ -1751,14 +1864,14 @@ function renderTeamRatings(){
     h+=`<span style="flex:1;font-size:.85em">${t.name}</span>`;
     h+=`<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">`;
     h+=`<div style="display:flex;align-items:center;gap:4px">`;
-    h+=`<span style="font-size:.65em;color:var(--txt3);width:40px;text-align:right">Angriff</span>`;
-    h+=`${fmtDelta(dAtk)}`;
-    h+=`<input type="number" step="0.05" min="0.3" max="2.0" value="${rt.atk.toFixed(2)}" data-rating="${t.id}" data-field="atk" style="width:52px">`;
+    h+=`<span style="font-size:.65em;color:var(--txt3);width:48px;text-align:right">GoalRate</span>`;
+    h+=`${fmtDelta(dGoal)}`;
+    h+=`<input type="number" step="0.01" min="0.85" max="1.18" value="${rt.goalRate.toFixed(2)}" data-rating="${t.id}" data-field="goalRate" style="width:56px">`;
     h+=`</div>`;
     h+=`<div style="display:flex;align-items:center;gap:4px">`;
-    h+=`<span style="font-size:.65em;color:var(--txt3);width:40px;text-align:right">Defense</span>`;
-    h+=`${fmtDelta(dDef)}`;
-    h+=`<input type="number" step="0.05" min="0.3" max="2.0" value="${rt.def.toFixed(2)}" data-rating="${t.id}" data-field="def" style="width:52px">`;
+    h+=`<span style="font-size:.65em;color:var(--txt3);width:48px;text-align:right">Balance</span>`;
+    h+=`${fmtDelta(dBal)}`;
+    h+=`<input type="number" step="0.01" min="-0.10" max="0.10" value="${rt.balance.toFixed(2)}" data-rating="${t.id}" data-field="balance" style="width:56px">`;
     h+=`</div>`;
     h+=`</div>`;
     h+=`</div>`;
@@ -2121,6 +2234,10 @@ function getCanvasFlagImage(flag){
 function renderBracketPage(){
   let h=`<h2 style="color:var(--gold);margin-bottom:4px">🗺 Turnierbaum</h2>`;
   h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:8px">Gruppen (links) → Sechzehntelfinale → … → Finale. Gestrichelte Linien zeigen welcher Gruppen-Platz in welches 16tel-Finale-Spiel einzieht. Klick auf ein K.o.-Match wechselt zum Tippen.</p>`;
+  h+=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">`;
+  h+=`<button id="toggleBracketLockedOnly" style="padding:5px 13px;border-radius:8px;border:1px solid var(--border);font-size:.78em;font-weight:600;cursor:pointer;transition:all .15s;background:${bracketLockedOnly?'var(--blue)':'var(--bg2)'};color:${bracketLockedOnly?'#fff':'var(--txt2)'}">${bracketLockedOnly?'✅ Nur gesperrte':'🔮 Prognose + Gesperrte'}</button>`;
+  h+=`<span style="font-size:.72em;color:var(--txt3)">${bracketLockedOnly?'Nur bestätigte Resultate — offene Plätze bleiben frei':'Prognosen füllen offene Felder'}</span>`;
+  h+=`</div>`;
   h+=`<div class="bracket-legend">`;
   h+=`<span style="color:#d4a843;font-size:.75em">━━ 1. Platz</span>`;
   h+=`<span style="color:#7eb8f7;font-size:.75em">━━ 2. Platz</span>`;
@@ -2245,11 +2362,14 @@ function renderBracket(){
         if(!grpSlotMap[slot.g]) grpSlotMap[slot.g]=[];
         grpSlotMap[slot.g].push({r32mi, isSlotA:si===0, pos:slot.pos});
       } else if(slot.src==='grp3'){
-        const assignments = getThirdAssignments();
+        const assignments = bracketLockedOnly ? getThirdAssignmentsLocked() : getThirdAssignments();
         const si2 = si;
         const teamId = assignments.get(m.id+'_'+si2);
         if(teamId!=null){
-          const gi=GN.findIndex((_,i)=>{ const tb=calcTable(i); return tb[2]?.id===teamId; });
+          const gi=GN.findIndex((_,i)=>{
+            const tb=bracketLockedOnly?calcTableLocked(i):calcTable(i);
+            return tb[2]?.id===teamId;
+          });
           if(gi>=0){
             const g=GN[gi];
             if(!grpSlotMap[g]) grpSlotMap[g]=[];
@@ -2314,7 +2434,7 @@ function renderBracket(){
     ctx.beginPath(); ctx.moveTo(bx+4,by+GHdr); ctx.lineTo(bx+GW-4,by+GHdr); ctx.stroke();
 
     // 3 team rows
-    const tb=calcTable(gi);
+    const tb=bracketLockedOnly?calcTableLocked(gi):calcTable(gi);
     for(let pos=1;pos<=3;pos++){
       const team=tb[pos-1]?TEAMS[tb[pos-1].id]:null;
       const rowY=by+GHdr+(pos-1)*GRow;
@@ -2341,6 +2461,26 @@ function renderBracket(){
     }
   });
 
+  // ── Highlight selected group box ────────────────────────────
+  if(selectedBracketGroup !== null){
+    const sgi = GN.indexOf(selectedBracketGroup);
+    if(sgi>=0){
+      const bx=grpColX, by=grpBoxY(sgi);
+      const gc=GROUP_COLORS[sgi];
+      const gr=parseInt(gc.slice(1,3),16);
+      const gg2=parseInt(gc.slice(3,5),16);
+      const gb=parseInt(gc.slice(5,7),16);
+      // Outer glow
+      ctx.strokeStyle=`rgba(${gr},${gg2},${gb},0.35)`;
+      ctx.lineWidth=6;
+      roundRect(ctx,bx-3,by-3,GW+6,GH+6,6); ctx.stroke();
+      // Solid border
+      ctx.strokeStyle=`rgba(${gr},${gg2},${gb},1.0)`;
+      ctx.lineWidth=2.5;
+      roundRect(ctx,bx,by,GW,GH,4); ctx.stroke();
+    }
+  }
+
   // ── Draw group→R32 connector lines ──────────────────────────
   // Each group has its own color; position 1=bright, 2=medium, 3=dim.
   // 12 groups × 3 positions = 36 unique X slots across the gap.
@@ -2348,15 +2488,26 @@ function renderBracket(){
   const slotW  = GG / 37;
   const gapX0  = grpColX + GW;
 
-  GN.forEach((g, gi)=>{
+  const hasSelection = selectedBracketGroup !== null;
+
+  // Draw non-selected groups first (dimmed), selected group last (on top)
+  const drawOrder = hasSelection
+    ? [...GN.keys()].filter(gi=>GN[gi]!==selectedBracketGroup).concat([...GN.keys()].filter(gi=>GN[gi]===selectedBracketGroup))
+    : [...GN.keys()];
+
+  drawOrder.forEach(gi=>{
+    const g = GN[gi];
     const slots = grpSlotMap[g] || [];
+    if(bracketLockedOnly && !groupHasAnyLocked(gi)) return;
     const by    = grpBoxY(gi);
     const baseColor = GROUP_COLORS[gi];
 
-    // Parse hex to rgb for alpha support
-    const r = parseInt(baseColor.slice(1,3),16);
+    const r  = parseInt(baseColor.slice(1,3),16);
     const rb = parseInt(baseColor.slice(3,5),16);
-    const b = parseInt(baseColor.slice(5,7),16);
+    const b  = parseInt(baseColor.slice(5,7),16);
+
+    const isSelected = hasSelection && g === selectedBracketGroup;
+    const isDimmed   = hasSelection && !isSelected;
 
     slots.forEach(({r32mi, isSlotA, pos})=>{
       const rowY     = by + GHdr + (pos-1)*GRow + GRow/2;
@@ -2368,11 +2519,30 @@ function renderBracket(){
       const r32LineY = isSlotA ? r32y + MH*0.27 : r32y + MH*0.73;
       const r32LineX = roundX(0);
 
-      const alpha = POS_ALPHA[pos-1];
-      ctx.strokeStyle = `rgba(${r},${rb},${b},${alpha})`;
-      ctx.lineWidth   = POS_WIDTH[pos-1];
-      ctx.setLineDash([]);
+      const baseAlpha = POS_ALPHA[pos-1];
+      // Highlight colors: gold / silver / bronze
+      const HIGHLIGHT_COLORS = ['#d4a017','#8a9bb0','#a0522d'];
+      const hlColor = HIGHLIGHT_COLORS[pos-1];
 
+      const alpha  = isDimmed ? 0.07 : baseAlpha;
+      const lw     = isSelected ? 3.5 - (pos-1)*0.5 : POS_WIDTH[pos-1];
+      const dotR   = isSelected ? 4.5 : 2.5;
+      const lineColor = isSelected ? hlColor : `rgba(${r},${rb},${b},${alpha})`;
+
+      // Halo for selected group
+      if(isSelected){
+        ctx.strokeStyle = `rgba(255,255,255,0.85)`;
+        ctx.lineWidth   = lw + 5;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(startX, rowY); ctx.lineTo(vx, rowY);
+        ctx.lineTo(vx, r32LineY); ctx.lineTo(r32LineX, r32LineY);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth   = lw;
+      ctx.setLineDash([]);
       ctx.beginPath();
       ctx.moveTo(startX,   rowY);
       ctx.lineTo(vx,       rowY);
@@ -2380,9 +2550,9 @@ function renderBracket(){
       ctx.lineTo(r32LineX, r32LineY);
       ctx.stroke();
 
-      ctx.fillStyle = `rgba(${r},${rb},${b},${alpha})`;
-      ctx.beginPath(); ctx.arc(startX,   rowY,     2.5, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(r32LineX, r32LineY, 2.5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = lineColor;
+      ctx.beginPath(); ctx.arc(startX,   rowY,     dotR, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r32LineX, r32LineY, dotR, 0, Math.PI*2); ctx.fill();
     });
   });
 
@@ -2401,12 +2571,16 @@ function renderBracket(){
       const pred=koPredictions[mid];
 
       let tAid=null,tBid=null;
-      if(isLocked){ tAid=resolveSlot(m.slotA); tBid=resolveSlot(m.slotB); }
-      if(tAid===null&&pred) tAid=pred.teamA;
-      if(tBid===null&&pred) tBid=pred.teamB;
+      if(bracketLockedOnly){
+        tAid=resolveSlotLocked(m.slotA); tBid=resolveSlotLocked(m.slotB);
+      } else {
+        if(isLocked){ tAid=resolveSlot(m.slotA); tBid=resolveSlot(m.slotB); }
+        if(tAid===null&&pred) tAid=pred.teamA;
+        if(tBid===null&&pred) tBid=pred.teamB;
+      }
       const tA=tAid!==null?TEAMS[tAid]:null;
       const tB=tBid!==null?TEAMS[tBid]:null;
-      const hasPred=!!pred;
+      const hasPred=!!pred&&!bracketLockedOnly;
 
       let scoreStr='',scoreColor='#5d6a85';
       if(isLocked){ scoreStr=`${kr.goalsA}:${kr.goalsB}${kr.pens?' n.E.':''}`; scoreColor='#27ae60'; }
@@ -2434,12 +2608,24 @@ function renderBracket(){
       const yA=y+15, yB=y+31, yScr=y+MH/2+1;
       const maxNameW=MW-52;
 
+      // In locked-only mode: show plain slot label without predicted team
+      function slotLabelBracket(slot){
+        if(bracketLockedOnly){
+          if(slot.src==='grp') return `${slot.pos}. Gr. ${slot.g}`;
+          if(slot.src==='grp3'){ const poolStr=slot.groups.join('/'); return `Bester 3. (${poolStr})`; }
+          const km=KO_BRACKET.find(x=>x.id===slot.id);
+          const rnd={r32:'R32',r16:'AF',qf:'VF',sf:'HF',final:'F','3p':'3P'}[km?.round]||'?';
+          return slot.w?`Sieger ${rnd} ${km?.label||''}`:`Verlierer ${rnd} ${km?.label||''}`;
+        }
+        return slotLabel(slot);
+      }
+
       if(tA){
         const color=isLocked?(winnerA?'#1d1d1f':'#8e8e93'):(winnerA?'#1d1d1f':'#515154');
         drawCanvasTeam(tA,nameX,yA,maxNameW,isLocked&&winnerA,color);
       } else {
         ctx.font='italic 8px "Segoe UI",sans-serif'; ctx.fillStyle='#8e8e93';
-        ctx.fillText(slotLabel(m.slotA),nameX,yA);
+        ctx.fillText(slotLabelBracket(m.slotA),nameX,yA);
       }
 
       ctx.strokeStyle='#e5e5ea'; ctx.lineWidth=0.5;
@@ -2450,7 +2636,7 @@ function renderBracket(){
         drawCanvasTeam(tB,nameX,yB,maxNameW,isLocked&&winnerB,color);
       } else {
         ctx.font='italic 8px "Segoe UI",sans-serif'; ctx.fillStyle='#8e8e93';
-        ctx.fillText(slotLabel(m.slotB),nameX,yB);
+        ctx.fillText(slotLabelBracket(m.slotB),nameX,yB);
       }
 
       if(scoreStr){
@@ -2469,15 +2655,51 @@ function renderBracket(){
   ctx.textAlign='center'; ctx.font='20px serif';
   ctx.fillText('🏆',fx,PAD.top-24);
 
-  // Click handler (KO matches → knockout tab)
-  canvas.onclick=(e)=>{
+  // Group box click zones
+  const groupClickZones = GN.map((g,gi)=>({g, x:grpColX, y:grpBoxY(gi), w:GW, h:GH}));
+
+  // Helper: convert CSS mouse coords → canvas logical coords
+  function canvasXY(e){
     const rect=canvas.getBoundingClientRect();
-    const mx=(e.clientX-rect.left), my=(e.clientY-rect.top);
+    // canvas.style.width/height are set in CSS px = W/H px
+    // logical coords go 0..W and 0..H
+    const mx=(e.clientX-rect.left) * (W/rect.width);
+    const my=(e.clientY-rect.top)  * (H/rect.height);
+    return {mx, my};
+  }
+
+  // Click handler
+  canvas.onclick=(e)=>{
+    const {mx,my}=canvasXY(e);
+
+    // Check group boxes first
+    for(const z of groupClickZones){
+      if(mx>=z.x&&mx<=z.x+z.w&&my>=z.y&&my<=z.y+z.h){
+        selectedBracketGroup = (selectedBracketGroup===z.g) ? null : z.g;
+        renderBracket();
+        return;
+      }
+    }
+    // Click anywhere else → clear highlight
+    if(selectedBracketGroup!==null){
+      selectedBracketGroup=null;
+      renderBracket();
+      return;
+    }
+    // Check KO match boxes
     for(const z of clickZones){
       if(mx>=z.x&&mx<=z.x+z.w&&my>=z.y&&my<=z.y+z.h){
         activeTab='knockout'; render(); break;
       }
     }
+  };
+
+  // Pointer cursor over group boxes
+  canvas.onmousemove=(e)=>{
+    const {mx,my}=canvasXY(e);
+    const overGroup = groupClickZones.some(z=>mx>=z.x&&mx<=z.x+z.w&&my>=z.y&&my<=z.y+z.h);
+    const overKO    = clickZones.some(z=>mx>=z.x&&mx<=z.x+z.w&&my>=z.y&&my<=z.y+z.h);
+    canvas.style.cursor = (overGroup||overKO) ? 'pointer' : 'grab';
   };
 }
 
@@ -2496,9 +2718,11 @@ function roundRect(ctx,x,y,w,h,r){
 // EVENTS
 // ============================================================
 function bind(){
-  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{activeTab=t.dataset.tab;render()});
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{activeTab=t.dataset.tab;if(t.dataset.tab!=='bracket')selectedBracketGroup=null;render()});
   const tog=document.getElementById('toggleLockedOnly');
   if(tog)tog.onclick=(e)=>{e.stopPropagation();overviewLockedOnly=!overviewLockedOnly;render();};
+  const togB=document.getElementById('toggleBracketLockedOnly');
+  if(togB)togB.onclick=(e)=>{e.stopPropagation();bracketLockedOnly=!bracketLockedOnly;render();};
   document.querySelectorAll('[data-goto]').forEach(c=>c.onclick=()=>{activeTab=c.dataset.goto;render()});
   document.querySelectorAll('.ag-group-badge[data-goto]').forEach(c=>c.onclick=(e)=>{e.stopPropagation();activeTab=c.dataset.goto;render()});
   document.querySelectorAll('.bgm-grp[data-goto]').forEach(c=>c.onclick=(e)=>{e.stopPropagation();activeTab=c.dataset.goto;render()});
@@ -2611,7 +2835,7 @@ function bind(){
     render();
   };
 
-  // Fill all games — Elo + Stärken
+  // Fill all games — Modell-Tipp
   const fagx=document.getElementById('fillAllGamesExt');
   if(fagx)fagx.onclick=()=>{
     for(let gi=0;gi<12;gi++){
@@ -2698,7 +2922,10 @@ function bind(){
     inp.addEventListener('change',()=>{
       const id=parseInt(inp.dataset.rating);
       const field=inp.dataset.field;
-      const val=Math.max(0.3,Math.min(2.0,parseFloat(inp.value)||1.0));
+      let val=parseFloat(inp.value);
+      if(field==='goalRate') val=Math.max(0.85,Math.min(1.18,isNaN(val)?1.0:val));
+      else if(field==='balance') val=Math.max(-0.10,Math.min(0.10,isNaN(val)?0.0:val));
+      else val=Math.max(0.3,Math.min(2.0,isNaN(val)?1.0:val));
       TEAM_RATINGS[id][field]=val;
       inp.value=val.toFixed(2);
       save();
@@ -2707,7 +2934,7 @@ function bind(){
   const rr=document.getElementById('resetRatings');
   if(rr)rr.onclick=()=>{
     // Defaults wiederherstellen — recalcAllElos wendet dann Auto-Updates neu an
-    DEFAULT_RATINGS.forEach((r,i)=>{TEAM_RATINGS[i].atk=r.atk;TEAM_RATINGS[i].def=r.def;});
+    DEFAULT_RATINGS.forEach((r,i)=>{TEAM_RATINGS[i].goalRate=r.goalRate;TEAM_RATINGS[i].balance=r.balance;});
     recalcAllElos();
     render();
   };
@@ -2802,7 +3029,7 @@ function bind(){
         const tAid=resolveForFill(m.slotA);
         const tBid=resolveForFill(m.slotB);
         if(tAid===null||tBid===null) continue;
-        const pr=predictMatch(tAid,tBid);
+        const pr=predictMatchExt(tAid,tBid);
         let gA=pr.goalsA, gB=pr.goalsB;
         if(gA===gB){ if(pr.pW>=pr.pL) gA++; else gB++; }
         tempKR[mid]={goalsA:gA,goalsB:gB,pens:null,autoFilled:true};
@@ -2896,6 +3123,20 @@ function bind(){
 load();
 loadKO();
 render();
+</script>
+
+<!-- Scroll-to-top button -->
+<button id="scrollTopBtn" title="Nach oben" aria-label="Nach oben scrollen">&#8679;</button>
+<script>
+(function(){
+  const btn=document.getElementById('scrollTopBtn');
+  window.addEventListener('scroll',function(){
+    btn.classList.toggle('visible',window.scrollY>200);
+  },{passive:true});
+  btn.addEventListener('click',function(){
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+})();
 </script>
 </body>
 </html>
