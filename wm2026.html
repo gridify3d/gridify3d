@@ -1827,29 +1827,65 @@ function genExport(){
 // ============================================================
 const FD_NAME_MAP = {
   // Gruppe A
-  'Mexico':0,'South Africa':1,'Korea Republic':2,'Czech Republic':3,'Czechia':3,
+  'Mexico':0,'México':0,
+  'South Africa':1,'RSA':1,
+  'Korea Republic':2,'South Korea':2,'Republic of Korea':2,
+  'Czech Republic':3,'Czechia':3,'Czech':3,
   // Gruppe B
-  'Canada':4,'Bosnia and Herzegovina':5,'Qatar':6,'Switzerland':7,
+  'Canada':4,
+  'Bosnia and Herzegovina':5,'Bosnia & Herzegovina':5,'Bosnia-Herzegovina':5,
+  'Qatar':6,
+  'Switzerland':7,
   // Gruppe C
-  'Brazil':8,'Morocco':9,'Haiti':10,'Scotland':11,
+  'Brazil':8,'Brasil':8,
+  'Morocco':9,'Maroc':9,
+  'Haiti':10,
+  'Scotland':11,
   // Gruppe D
-  'USA':12,'United States':12,'Paraguay':13,'Australia':14,'Turkey':15,'Türkiye':15,
+  'United States':12,'USA':12,'United States of America':12,
+  'Paraguay':13,
+  'Australia':14,
+  'Turkey':15,'Türkiye':15,'Turkiye':15,
   // Gruppe E
-  'Germany':16,'Curaçao':17,'Curacao':17,"Côte d'Ivoire":18,'Ivory Coast':18,'Ecuador':19,
+  'Germany':16,'Deutschland':16,
+  'Curaçao':17,'Curacao':17,
+  "Côte d'Ivoire":18,"Cote d'Ivoire":18,'Ivory Coast':18,'Côte D\'Ivoire':18,
+  'Ecuador':19,
   // Gruppe F
-  'Netherlands':20,'Japan':21,'Sweden':22,'Tunisia':23,
+  'Netherlands':20,'Holland':20,
+  'Japan':21,
+  'Sweden':22,'Sverige':22,
+  'Tunisia':23,
   // Gruppe G
-  'Belgium':24,'Egypt':25,'Iran':26,'New Zealand':27,
+  'Belgium':24,
+  'Egypt':25,
+  'Iran':26,'IR Iran':26,'Islamic Republic of Iran':26,
+  'New Zealand':27,
   // Gruppe H
-  'Spain':28,'Cape Verde':29,'Cabo Verde':29,'Saudi Arabia':30,'Uruguay':31,
+  'Spain':28,'España':28,
+  'Cape Verde':29,'Cabo Verde':29,'Cape Verde Islands':29,
+  'Saudi Arabia':30,'KSA':30,
+  'Uruguay':31,
   // Gruppe I
-  'France':32,'Senegal':33,'Iraq':34,'Norway':35,
+  'France':32,
+  'Senegal':33,
+  'Iraq':34,
+  'Norway':35,'Norge':35,
   // Gruppe J
-  'Argentina':36,'Algeria':37,'Austria':38,'Jordan':39,
+  'Argentina':36,
+  'Algeria':37,'Algérie':37,
+  'Austria':38,'Österreich':38,
+  'Jordan':39,
   // Gruppe K
-  'Portugal':40,'DR Congo':41,'Congo DR':41,'Uzbekistan':42,'Colombia':43,
+  'Portugal':40,
+  'DR Congo':41,'Congo DR':41,'Congo, DR':41,'Democratic Republic of Congo':41,'Congo (DR)':41,
+  'Uzbekistan':42,
+  'Colombia':43,
   // Gruppe L
-  'England':44,'Croatia':45,'Ghana':46,'Panama':47,
+  'England':44,
+  'Croatia':45,'Hrvatska':45,
+  'Ghana':46,
+  'Panama':47,
 };
 
 // Match key lookup: [teamIdA, teamIdB] → "g{gi}_m{mi}"
