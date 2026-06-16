@@ -162,8 +162,8 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .bgm-vs{font-size:.7em;color:var(--txt3);font-weight:700;align-self:center;flex-shrink:0;padding:0 4px}
 
 /* Dual prediction columns */
-.pred-cols{display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr;gap:0;margin:10px 0 4px;background:var(--bg3);border-radius:10px;overflow:hidden}
-.pred-col{padding:10px 12px;display:flex;flex-direction:column;gap:4px;align-items:center}
+.pred-cols{display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr;gap:0;margin:10px 0 4px;background:var(--bg3);border-radius:10px;overflow:hidden;width:100%}
+.pred-col{padding:10px 12px;display:flex;flex-direction:column;gap:4px;align-items:center;min-width:0;overflow:hidden}
 .pred-col-ext{background:rgba(28,110,243,.04)}
 .pred-col-top{background:rgba(240,156,0,.05)}
 .pred-divider{background:var(--border)}
@@ -1384,7 +1384,7 @@ function renderAllGames(){
     const vA=r.goalsA!==''?r.goalsA:'';
     const vB=r.goalsB!==''?r.goalsB:'';
 
-    h+=`<div class="match-card ${isLocked?'is-locked':'is-prediction'}" style="max-width:700px">`;
+    h+=`<div class="match-card ${isLocked?'is-locked':'is-prediction'}">`;
 
     // Header row: time + group badge
     h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">`;
