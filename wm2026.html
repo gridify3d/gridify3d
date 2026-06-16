@@ -162,9 +162,10 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 .bgm-vs{font-size:.7em;color:var(--txt3);font-weight:700;align-self:center;flex-shrink:0;padding:0 4px}
 
 /* Dual prediction columns */
-.pred-cols{display:grid;grid-template-columns:1fr 1px 1fr;gap:0;margin:10px 0 4px;background:var(--bg3);border-radius:10px;overflow:hidden}
+.pred-cols{display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr;gap:0;margin:10px 0 4px;background:var(--bg3);border-radius:10px;overflow:hidden}
 .pred-col{padding:10px 12px;display:flex;flex-direction:column;gap:4px;align-items:center}
 .pred-col-ext{background:rgba(28,110,243,.04)}
+.pred-col-top{background:rgba(240,156,0,.05)}
 .pred-divider{background:var(--border)}
 .pred-col-label{font-size:.65em;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--txt3)}
 .pred-col-score{font-size:1.7em;font-weight:800;letter-spacing:2px;color:var(--txt);line-height:1.1}
@@ -1350,6 +1351,7 @@ function renderAllGames(){
   h+=`<span style="font-size:.72em;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.5px;margin-right:2px">Übernehmen:</span>`;
   h+=`<button class="btn btn-outline" id="fillAllGamesElo" style="font-size:.8em">Elo-Modell</button>`;
   h+=`<button class="btn btn-gold" id="fillAllGamesExt" style="font-size:.8em">Modell-Tipp</button>`;
+  h+=`<button class="btn" id="fillAllGamesTopPP" style="font-size:.8em;background:#f09c00;color:#fff">🔝 Top-Tipp (PP)</button>`;
   h+=`<span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>`;
   h+=`<button class="btn" id="lockAllGames" style="background:var(--green);color:#fff;font-size:.8em">🔒 Alle sperren</button>`;
   h+=`<button class="btn btn-outline" id="unlockAllGames" style="border-color:var(--red);color:var(--red);font-size:.8em">🔓 Sperren entfernen</button>`;
@@ -1427,6 +1429,15 @@ function renderAllGames(){
       h+=`<div class="pred-col-detail">Top: ${predExt.topScores}</div>`;
       h+=`<button class="pred-take-btn pred-take-ext" data-key="${m.key}" data-a="${predExt.goalsA}" data-b="${predExt.goalsB}">↙ Übernehmen</button>`;
       h+=`</div>`;
+      h+=`<div class="pred-divider"></div>`;
+      const topPP=topTipExtFn(m.hid,m.aid);
+      const changedTop=topPP.goalsA!==predExt.goalsA||topPP.goalsB!==predExt.goalsB;
+      h+=`<div class="pred-col pred-col-top">`;
+      h+=`<div class="pred-col-label" style="color:#f09c00">🔝 Top-Tipp PP</div>`;
+      h+=`<div class="pred-col-score ${changedTop?"pred-col-score-diff":""}" style="${changedTop?"color:#f09c00":""}">${topPP.goalsA}<span class="sep">:</span>${topPP.goalsB}</div>`;
+      h+=`<div class="pred-col-meta"><span style="color:var(--txt3)">Poisson-Max</span></div>`;
+      h+=`<button class="pred-take-btn" style="border-color:rgba(240,156,0,.4);color:#c47f00" data-key="${m.key}" data-a="${topPP.goalsA}" data-b="${topPP.goalsB}">↙ Übernehmen</button>`;
+      h+=`</div>`;
       h+=`</div>`;
       // Manual input
       h+=`<div class="match-input-row">`;
@@ -1438,7 +1449,8 @@ function renderAllGames(){
       h+=`<button class="btn-lock lock" data-key="${m.key}" ${canLock?'':'disabled'}>🔒 Sperren</button>`;
       h+=`</div>`;
     }else{
-      h+=`<div class="pred-was">Elo: ${pred.goalsA}:${pred.goalsB} · Modell: ${predExt.goalsA}:${predExt.goalsB}</div>`;
+      const twas2=topTipExtFn(m.hid,m.aid);
+      h+=`<div class="pred-was">Elo: ${pred.goalsA}:${pred.goalsB} · Modell: ${predExt.goalsA}:${predExt.goalsB} · Top-PP: ${twas2.goalsA}:${twas2.goalsB}</div>`;
       h+=`<div style="text-align:center;margin-top:8px"><button class="btn-lock unlock" data-key="${m.key}">🔓 Entsperren</button></div>`;
     }
 
@@ -1535,6 +1547,15 @@ function renderGroup(gi){
       h+=`<div class="pred-col-detail">Top: ${predExt.topScores}</div>`;
         h+=`<button class="pred-take-btn pred-take-ext" data-key="${key}" data-a="${predExt.goalsA}" data-b="${predExt.goalsB}">↙ Übernehmen</button>`;
         h+=`</div>`;
+        h+=`<div class="pred-divider"></div>`;
+        const topPPg=topTipExtFn(hid,aid);
+        const changedTopG=topPPg.goalsA!==predExt.goalsA||topPPg.goalsB!==predExt.goalsB;
+        h+=`<div class="pred-col pred-col-top">`;
+        h+=`<div class="pred-col-label" style="color:#f09c00">🔝 Top-Tipp PP</div>`;
+        h+=`<div class="pred-col-score ${changedTopG?"pred-col-score-diff":""}" style="${changedTopG?"color:#f09c00":""}">${topPPg.goalsA}<span class="sep">:</span>${topPPg.goalsB}</div>`;
+        h+=`<div class="pred-col-meta"><span style="color:var(--txt3)">Poisson-Max</span></div>`;
+        h+=`<button class="pred-take-btn" style="border-color:rgba(240,156,0,.4);color:#c47f00" data-key="${key}" data-a="${topPPg.goalsA}" data-b="${topPPg.goalsB}">↙ Übernehmen</button>`;
+        h+=`</div>`;
 
         h+=`</div>`; // pred-cols
 
@@ -1550,7 +1571,8 @@ function renderGroup(gi){
         h+=`<button class="btn-lock lock" data-key="${key}" ${canLock?'':'disabled'}>🔒 Sperren</button>`;
         h+=`</div>`;
       } else {
-        h+=`<div class="pred-was">Elo-Prognose: ${pred.goalsA}:${pred.goalsB} · Modell-Prognose: ${predExt.goalsA}:${predExt.goalsB}</div>`;
+        const twas=topTipExtFn(hid,aid);
+        h+=`<div class="pred-was">Elo: ${pred.goalsA}:${pred.goalsB} · Modell: ${predExt.goalsA}:${predExt.goalsB} · Top-PP: ${twas.goalsA}:${twas.goalsB}</div>`;
         h+=`<div style="text-align:center;margin-top:8px">`;
         h+=`<button class="btn-lock unlock" data-key="${key}">🔓 Entsperren</button></div>`;
       }
@@ -1564,6 +1586,7 @@ function renderGroup(gi){
   h+=`<div class="actions">`;
   h+=`<button class="btn btn-gold" id="fillAll" data-gi="${gi}">Elo-Prognose übernehmen</button>`;
   h+=`<button class="btn btn-gold" id="fillAllExt" data-gi="${gi}" style="background:var(--blue)">Modell-Tipps übernehmen</button>`;
+  h+=`<button class="btn" id="fillAllTopPP" data-gi="${gi}" style="background:#f09c00;color:#fff">🔝 Top-Tipp (PP)</button>`;
   h+=`<button class="btn btn-outline" id="lockAll" data-gi="${gi}">Alle sperren</button>`;
   h+=`<button class="btn btn-outline" style="border-color:var(--red);color:var(--red)" id="clearGrp" data-gi="${gi}">Zurücksetzen</button>`;
   h+=`</div>`;
@@ -2998,6 +3021,23 @@ function bind(){
     render();
   };
 
+  // Fill all games — Top-Tipp (PP)
+  const fagtpp=document.getElementById('fillAllGamesTopPP');
+  if(fagtpp)fagtpp.onclick=()=>{
+    for(let gi=0;gi<12;gi++){
+      const tids=GROUPS[gi];
+      for(let md=0;md<3;md++)for(let mi=0;mi<2;mi++){
+        const k=`g${gi}_m${md*2+mi}`;
+        if(!results[k]||!results[k].locked){
+          const[hi,ai]=MDS[md][mi];
+          const tp=topTipExtFn(tids[hi],tids[ai]);
+          results[k]={goalsA:tp.goalsA,goalsB:tp.goalsB,locked:false};
+        }
+      }
+    }
+    render();
+  };
+
   // Lock all entered in all games view
   const lag=document.getElementById('lockAllGames');
   if(lag)lag.onclick=()=>{
@@ -3039,6 +3079,20 @@ function bind(){
         const[hi,ai]=MDS[md][mi];
         const pr=predictMatchExt(tids[hi],tids[ai]);
         results[k]={goalsA:pr.goalsA,goalsB:pr.goalsB,locked:false};
+      }
+    }
+    render();
+  };
+
+  const fatpp=document.getElementById('fillAllTopPP');
+  if(fatpp)fatpp.onclick=()=>{
+    const gi=parseInt(fatpp.dataset.gi),tids=GROUPS[gi];
+    for(let md=0;md<3;md++)for(let mi=0;mi<2;mi++){
+      const k=`g${gi}_m${md*2+mi}`;
+      if(!results[k]||!results[k].locked){
+        const[hi,ai]=MDS[md][mi];
+        const tp=topTipExtFn(tids[hi],tids[ai]);
+        results[k]={goalsA:tp.goalsA,goalsB:tp.goalsB,locked:false};
       }
     }
     render();
