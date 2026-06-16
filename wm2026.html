@@ -1608,6 +1608,66 @@ function renderParams(){
   return h;
 }
 
+// ============================================================
+// PUNKTEBERECHNUNG — Tippspiel-Scoring (nur gesperrte Spiele)
+// 4P = richtiges Resultat
+// 3P = richtiger Sieger + richtige Tordifferenz
+// 2P = richtiger Sieger (oder: Unentschieden korrekt vorhergesagt, Ergebnis falsch)
+// 0P = alles andere
+// ============================================================
+function calcTippPoints(predA, predB, realA, realB){
+  const predWin = predA > predB ? 'A' : predA < predB ? 'B' : 'D';
+  const realWin = realA > realB ? 'A' : realA < realB ? 'B' : 'D';
+  if(predA === realA && predB === realB) return 4;
+  if(predWin !== realWin) return 0;
+  if(predWin === 'D') return 2; // Unentschieden korrekt, falsches Ergebnis
+  if((predA - predB) === (realA - realB)) return 3; // gleiche Tordifferenz
+  return 2; // nur Sieger richtig
+}
+
+// Für eine Gruppe alle gesperrten Spiele auswerten
+// tipFn(hid, aid) → {goalsA, goalsB}
+function calcGroupScore(gi, tipFn){
+  const tids = GROUPS[gi];
+  let pts = 0, count = 0;
+  for(let md=0;md<3;md++){
+    for(let mi=0;mi<2;mi++){
+      const key = `g${gi}_m${md*2+mi}`;
+      const r = results[key];
+      if(!r || !r.locked) continue;
+      const [hi,ai] = MDS[md][mi];
+      const hid = tids[hi], aid = tids[ai];
+      const tip = tipFn(hid, aid);
+      pts += calcTippPoints(tip.goalsA, tip.goalsB, r.goalsA, r.goalsB);
+      count++;
+    }
+  }
+  return {pts, count};
+}
+
+// Summiert über alle Gruppen
+function calcTotalScore(tipFn){
+  let pts=0, count=0;
+  for(let gi=0;gi<12;gi++){
+    const s = calcGroupScore(gi, tipFn);
+    pts += s.pts; count += s.count;
+  }
+  return {pts, count};
+}
+
+// "Top-Tipp" = das mathematisch wahrscheinlichste Ergebnis (scoreLines[0])
+function topTipFn(hid, aid){
+  const {lA, lB} = predictMatch(hid, aid);
+  const sl = scoreLines(lA, lB, 7);
+  return {goalsA: sl[0].a, goalsB: sl[0].b};
+}
+// Top-Tipp via PowerProfile-Modell
+function topTipExtFn(hid, aid){
+  const {lA, lB} = predictMatchExt(hid, aid);
+  const sl = scoreLines(lA, lB, 7);
+  return {goalsA: sl[0].a, goalsB: sl[0].b};
+}
+
 function renderOverview(){
   let h=`<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">`;
   h+=`<div><h2 style="color:var(--txt);font-weight:700;letter-spacing:-.2px">Gruppenübersicht</h2>`;
@@ -1621,6 +1681,43 @@ function renderOverview(){
   h+=`</span>`;
   h+=`${tog?'Nur gesperrte Resultate':'Prognosen einbeziehen'}</button>`;
   h+=`</div>`;
+
+  // ── Tippspiel-Scoring (gesperrte Spiele) ──────────────────────────────────
+  const sElo   = calcTotalScore((hid,aid) => { const p=predictMatch(hid,aid);    return {goalsA:p.goalsA,goalsB:p.goalsB}; });
+  const sPP    = calcTotalScore((hid,aid) => { const p=predictMatchExt(hid,aid); return {goalsA:p.goalsA,goalsB:p.goalsB}; });
+  const sTopPP = calcTotalScore(topTipExtFn);
+  const totalLocked = sElo.count;
+  const maxPts  = totalLocked * 4;
+
+  if(totalLocked > 0){
+    const pct = v => maxPts > 0 ? Math.round(v/maxPts*100) : 0;
+    const bar = (v, color) => {
+      const w = maxPts > 0 ? Math.round(v/maxPts*100) : 0;
+      return `<div style="height:6px;background:var(--bg4);border-radius:3px;margin-top:5px;overflow:hidden"><div style="height:100%;width:${w}%;background:${color};border-radius:3px;transition:width .4s"></div></div>`;
+    };
+    const scoreCard = (label, icon, s, color, tip) => {
+      const p = pct(s.pts);
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow-sm);flex:1;min-width:160px">
+        <div style="font-size:.68em;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--txt3);margin-bottom:4px">${icon} ${label}</div>
+        <div style="font-size:1.6em;font-weight:800;color:${color};letter-spacing:-.5px;line-height:1">${s.pts}<span style="font-size:.5em;font-weight:500;color:var(--txt3);margin-left:4px">/ ${maxPts} P</span></div>
+        <div style="font-size:.72em;color:var(--txt3);margin-top:2px">${p}% · ⌀ ${totalLocked>0?(s.pts/totalLocked).toFixed(1):0} P/Spiel</div>
+        ${bar(s.pts, color)}
+        <div style="font-size:.65em;color:var(--txt3);margin-top:5px;font-style:italic">${tip}</div>
+      </div>`;
+    };
+    h += `<div style="margin-bottom:20px">`;
+    h += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">`;
+    h += `<h3 style="font-weight:700;font-size:.9em;color:var(--txt)">🏆 Modell-Scoring</h3>`;
+    h += `<span style="font-size:.72em;color:var(--txt3)">${totalLocked} gesperrte Spiele · max. ${maxPts} Punkte</span>`;
+    h += `</div>`;
+    h += `<div style="display:flex;gap:10px;flex-wrap:wrap">`;
+    h += scoreCard('Elo-Modell',   '📐', sElo,   'var(--txt)',  'Kalibrierter Tipp via Elo-Differenz');
+    h += scoreCard('PowerProfile', '⚡', sPP,    'var(--blue)', 'Kalibrierter Tipp mit Tempo/Balance-Korrektur');
+    h += scoreCard('Top-Tipp (PP)',  '🔝', sTopPP, '#f09c00',  'Roh-wahrscheinlichstes Ergebnis laut PP-Poisson');
+    h += `</div>`;
+    h += `</div>`;
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   h+=`<div class="overview-grid">`;
   for(let gi=0;gi<12;gi++){
