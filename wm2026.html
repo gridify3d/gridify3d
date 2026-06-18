@@ -362,34 +362,101 @@ const GN=['A','B','C','D','E','F','G','H','I','J','K','L'];
 TEAMS.forEach(t=>t.defaultBase=t.base);
 const GROUPS=[[0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15],[16,17,18,19],[20,21,22,23],[24,25,26,27],[28,29,30,31],[32,33,34,35],[36,37,38,39],[40,41,42,43],[44,45,46,47]];
 const HOST_IDS=[0,4,12];
-const MDS=[[[0,1],[2,3]],[[0,2],[1,3]],[[0,3],[1,2]]];
+// MATCH_PAIRS[gi][md][mi] = [home_pos, away_pos] — offizieller FIFA-Spielplan
+// Ersetzt das alte globale MDS-Array, da Heim/Auswärts pro Gruppe unterschiedlich ist.
+// MATCH_PAIRS[gi][md][mi] = [home_pos, away_pos] — offizieller FIFA-Spielplan
+// mi=0 ist immer das frühere Spiel des Spieltags (kleinerer sortKey), mi=1 das spätere.
+// Positionen beziehen sich auf den Index innerhalb GROUPS[gi].
+const MATCH_PAIRS=[
+  // Gruppe A: MEX[0],RSA[1],KOR[2],CZE[3]
+  // MD0: MEX-RSA(11.Jun 21:00) mi=0, KOR-CZE(12.Jun 04:00) mi=1
+  // MD1: CZE-RSA(18.Jun 18:00) mi=0, MEX-KOR(19.Jun 03:00) mi=1
+  // MD2: CZE-MEX(25.Jun 03:00) mi=0, RSA-KOR(25.Jun 03:00) mi=1
+  [[[0,1],[2,3]],[[3,1],[0,2]],[[3,0],[1,2]]],
+  // Gruppe B: CAN[0],BIH[1],QAT[2],SUI[3]
+  // MD0: CAN-BIH(12.Jun 21:00) mi=0, QAT-SUI(13.Jun 21:00) mi=1
+  // MD1: SUI-BIH(18.Jun 21:00) mi=0, CAN-QAT(19.Jun 00:00) mi=1
+  // MD2: SUI-CAN(24.Jun 21:00) mi=0, BIH-QAT(24.Jun 21:00) mi=1
+  [[[0,1],[2,3]],[[3,1],[0,2]],[[3,0],[1,2]]],
+  // Gruppe C: BRA[0],MAR[1],HAI[2],SCO[3]
+  // MD0: BRA-MAR(14.Jun 00:00) mi=0, HAI-SCO(14.Jun 03:00) mi=1
+  // MD1: SCO-MAR(20.Jun 00:00) mi=0, BRA-HAI(20.Jun 02:30) mi=1
+  // MD2: SCO-BRA(25.Jun 00:00) mi=0, MAR-HAI(25.Jun 00:00) mi=1
+  [[[0,1],[2,3]],[[3,1],[0,2]],[[3,0],[1,2]]],
+  // Gruppe D: USA[0],PAR[1],AUS[2],TUR[3]
+  // MD0: USA-PAR(13.Jun 03:00) mi=0, AUS-TUR(14.Jun 06:00) mi=1
+  // MD1: USA-AUS(19.Jun 21:00) mi=0, TUR-PAR(20.Jun 05:00) mi=1
+  // MD2: TUR-USA(26.Jun 04:00) mi=0, PAR-AUS(26.Jun 04:00) mi=1
+  [[[0,1],[2,3]],[[0,2],[3,1]],[[3,0],[1,2]]],
+  // Gruppe E: GER[0],CUR[1],CIV[2],ECU[3]
+  // MD0: GER-CUR(14.Jun 19:00) mi=0, CIV-ECU(15.Jun 01:00) mi=1
+  // MD1: GER-CIV(20.Jun 22:00) mi=0, ECU-CUR(21.Jun 02:00) mi=1
+  // MD2: ECU-GER(25.Jun 22:00) mi=0, CUR-CIV(25.Jun 22:00) mi=1
+  [[[0,1],[2,3]],[[0,2],[3,1]],[[3,0],[1,2]]],
+  // Gruppe F: NED[0],JPN[1],SWE[2],TUN[3]
+  // MD0: NED-JPN(14.Jun 22:00) mi=0, SWE-TUN(15.Jun 04:00) mi=1
+  // MD1: NED-SWE(20.Jun 19:00) mi=0, TUN-JPN(21.Jun 06:00) mi=1
+  // MD2: JPN-SWE(26.Jun 01:00) mi=0, TUN-NED(26.Jun 01:00) mi=1
+  [[[0,1],[2,3]],[[0,2],[3,1]],[[1,2],[3,0]]],
+  // Gruppe G: BEL[0],EGY[1],IRN[2],NZL[3]
+  // MD0: BEL-EGY(15.Jun 21:00) mi=0, IRN-NZL(16.Jun 03:00) mi=1
+  // MD1: BEL-IRN(21.Jun 21:00) mi=0, NZL-EGY(22.Jun 03:00) mi=1
+  // MD2: EGY-IRN(27.Jun 05:00) mi=0, NZL-BEL(27.Jun 05:00) mi=1
+  [[[0,1],[2,3]],[[0,2],[3,1]],[[1,2],[3,0]]],
+  // Gruppe H: ESP[0],CPV[1],SAU[2],URU[3]
+  // MD0: ESP-CPV(15.Jun 18:00) mi=0, SAU-URU(16.Jun 00:00) mi=1
+  // MD1: ESP-SAU(21.Jun 18:00) mi=0, URU-CPV(22.Jun 00:00) mi=1
+  // MD2: URU-ESP(27.Jun 02:00) mi=0, CPV-SAU(27.Jun 02:00) mi=1
+  [[[0,1],[2,3]],[[0,2],[3,1]],[[3,0],[1,2]]],
+  // Gruppe I: FRA[0],SEN[1],IRQ[2],NOR[3]
+  // MD0: FRA-SEN(16.Jun 21:00) mi=0, IRQ-NOR(17.Jun 00:00) mi=1
+  // MD1: FRA-IRQ(22.Jun 23:00) mi=0, NOR-SEN(23.Jun 02:00) mi=1
+  // MD2: NOR-FRA(26.Jun 21:00) mi=0, SEN-IRQ(26.Jun 21:00) mi=1
+  [[[0,1],[2,3]],[[0,2],[3,1]],[[3,0],[1,2]]],
+  // Gruppe J: ARG[0],ALG[1],AUT[2],JOR[3]
+  // MD0: ARG-ALG(17.Jun 03:00) mi=0, AUT-JOR(17.Jun 06:00) mi=1
+  // MD1: ARG-AUT(22.Jun 19:00) mi=0, JOR-ALG(23.Jun 05:00) mi=1
+  // MD2: JOR-ARG(28.Jun 04:00) mi=0, ALG-AUT(28.Jun 04:00) mi=1
+  [[[0,1],[2,3]],[[0,2],[3,1]],[[3,0],[1,2]]],
+  // Gruppe K: POR[0],DRC[1],UZB[2],COL[3]
+  // MD0: POR-DRC(17.Jun 19:00) mi=0, UZB-COL(18.Jun 04:00) mi=1
+  // MD1: POR-UZB(23.Jun 19:00) mi=0, COL-DRC(24.Jun 04:00) mi=1
+  // MD2: COL-POR(28.Jun 01:30) mi=0, DRC-UZB(28.Jun 01:30) mi=1
+  [[[0,1],[2,3]],[[0,2],[3,1]],[[3,0],[1,2]]],
+  // Gruppe L: ENG[0],CRO[1],GHA[2],PAN[3]
+  // MD0: ENG-CRO(17.Jun 22:00) mi=0, GHA-PAN(18.Jun 01:00) mi=1
+  // MD1: ENG-GHA(23.Jun 22:00) mi=0, PAN-CRO(24.Jun 01:00) mi=1
+  // MD2: PAN-ENG(27.Jun 23:00) mi=0, CRO-GHA(27.Jun 23:00) mi=1
+  [[[0,1],[2,3]],[[0,2],[3,1]],[[3,0],[1,2]]],
+];
 
 // Match date+time per group, per matchday, per match (Swiss time = MESZ)
 // Format: MD_TIMES[groupIndex][matchday 0-2][matchInMatchday 0-1] = 'DD. Mon HH:MM'
+// mi=0 = früheres Spiel, mi=1 = späteres Spiel — konsistent mit MATCH_PAIRS
 const MD_TIMES=[
-  // Gruppe A: MEX[0], RSA[1], KOR[2], CZE[3]  — MD0:[0vs1],[2vs3]  MD1:[0vs2],[1vs3]  MD2:[0vs3],[1vs2]
+  // Gruppe A: MD0:[MEX-RSA,KOR-CZE] MD1:[CZE-RSA,MEX-KOR] MD2:[CZE-MEX,RSA-KOR]
   [['11. Jun 21:00','12. Jun 04:00'],['18. Jun 18:00','19. Jun 03:00'],['25. Jun 03:00','25. Jun 03:00']],
-  // Gruppe B: CAN[4], BIH[5], QAT[6], SUI[7]
+  // Gruppe B: MD0:[CAN-BIH,QAT-SUI] MD1:[SUI-BIH,CAN-QAT] MD2:[SUI-CAN,BIH-QAT]
   [['12. Jun 21:00','13. Jun 21:00'],['18. Jun 21:00','19. Jun 00:00'],['24. Jun 21:00','24. Jun 21:00']],
-  // Gruppe C: BRA[8], MAR[9], HAI[10], SCO[11]
+  // Gruppe C: MD0:[BRA-MAR,HAI-SCO] MD1:[SCO-MAR,BRA-HAI] MD2:[SCO-BRA,MAR-HAI]
   [['14. Jun 00:00','14. Jun 03:00'],['20. Jun 00:00','20. Jun 02:30'],['25. Jun 00:00','25. Jun 00:00']],
-  // Gruppe D: USA[12], PAR[13], AUS[14], TUR[15]
+  // Gruppe D: MD0:[USA-PAR,AUS-TUR] MD1:[USA-AUS,TUR-PAR] MD2:[TUR-USA,PAR-AUS]
   [['13. Jun 03:00','14. Jun 06:00'],['19. Jun 21:00','20. Jun 05:00'],['26. Jun 04:00','26. Jun 04:00']],
-  // Gruppe E: GER[16], CUR[17], CIV[18], ECU[19]
+  // Gruppe E: MD0:[GER-CUR,CIV-ECU] MD1:[GER-CIV,ECU-CUR] MD2:[ECU-GER,CUR-CIV]
   [['14. Jun 19:00','15. Jun 01:00'],['20. Jun 22:00','21. Jun 02:00'],['25. Jun 22:00','25. Jun 22:00']],
-  // Gruppe F: NED[20], JPN[21], SWE[22], TUN[23]
+  // Gruppe F: MD0:[NED-JPN,SWE-TUN] MD1:[NED-SWE,TUN-JPN] MD2:[JPN-SWE,TUN-NED]
   [['14. Jun 22:00','15. Jun 04:00'],['20. Jun 19:00','21. Jun 06:00'],['26. Jun 01:00','26. Jun 01:00']],
-  // Gruppe G: BEL[24], EGY[25], IRN[26], NZL[27]
+  // Gruppe G: MD0:[BEL-EGY,IRN-NZL] MD1:[BEL-IRN,NZL-EGY] MD2:[EGY-IRN,NZL-BEL]
   [['15. Jun 21:00','16. Jun 03:00'],['21. Jun 21:00','22. Jun 03:00'],['27. Jun 05:00','27. Jun 05:00']],
-  // Gruppe H: ESP[28], CPV[29], SAU[30], URU[31]
+  // Gruppe H: MD0:[ESP-CPV,SAU-URU] MD1:[ESP-SAU,URU-CPV] MD2:[URU-ESP,CPV-SAU]
   [['15. Jun 18:00','16. Jun 00:00'],['21. Jun 18:00','22. Jun 00:00'],['27. Jun 02:00','27. Jun 02:00']],
-  // Gruppe I: FRA[32], SEN[33], IRQ[34], NOR[35]
+  // Gruppe I: MD0:[FRA-SEN,IRQ-NOR] MD1:[FRA-IRQ,NOR-SEN] MD2:[NOR-FRA,SEN-IRQ]
   [['16. Jun 21:00','17. Jun 00:00'],['22. Jun 23:00','23. Jun 02:00'],['26. Jun 21:00','26. Jun 21:00']],
-  // Gruppe J: ARG[36], ALG[37], AUT[38], JOR[39]
+  // Gruppe J: MD0:[ARG-ALG,AUT-JOR] MD1:[ARG-AUT,JOR-ALG] MD2:[JOR-ARG,ALG-AUT]
   [['17. Jun 03:00','17. Jun 06:00'],['22. Jun 19:00','23. Jun 05:00'],['28. Jun 04:00','28. Jun 04:00']],
-  // Gruppe K: POR[40], DRC[41], UZB[42], COL[43]
+  // Gruppe K: MD0:[POR-DRC,UZB-COL] MD1:[POR-UZB,COL-DRC] MD2:[COL-POR,DRC-UZB]
   [['17. Jun 19:00','18. Jun 04:00'],['23. Jun 19:00','24. Jun 04:00'],['28. Jun 01:30','28. Jun 01:30']],
-  // Gruppe L: ENG[44], CRO[45], GHA[46], PAN[47]
+  // Gruppe L: MD0:[ENG-CRO,GHA-PAN] MD1:[ENG-GHA,PAN-CRO] MD2:[PAN-ENG,CRO-GHA]
   [['17. Jun 22:00','18. Jun 01:00'],['23. Jun 22:00','24. Jun 01:00'],['27. Jun 23:00','27. Jun 23:00']],
 ];
 
@@ -991,7 +1058,7 @@ function recalcAllElos(){
         const r=results[k];
         if(r&&r.locked){
           const tids=GROUPS[gi];
-          const[hi,ai]=MDS[md][mi];
+          const[hi,ai]=MATCH_PAIRS[gi][md][mi];
           const prePred = predictMatchExt(tids[hi],tids[ai]); // Erwartung vor dem Spielzustands-Update
           updateTeamRatings(tids[hi],tids[ai],r.goalsA,r.goalsB,prePred.lA,prePred.lB);
           updateEloSingle(tids[hi],tids[ai],r.goalsA,r.goalsB);
@@ -1047,7 +1114,7 @@ function applyMotivationBonus(){
         const k=`g${gi}_m${md*2+mi}`;
         const r=results[k];
         if(!r||!r.locked) continue;
-        const[hi,ai]=MDS[md][mi];
+        const[hi,ai]=MATCH_PAIRS[gi][md][mi];
         const hid=tids[hi], aid=tids[ai];
         const gA=parseInt(r.goalsA), gB=parseInt(r.goalsB);
         stats[hid].gf+=gA; stats[hid].gd+=(gA-gB);
@@ -1155,7 +1222,7 @@ function calcTable(gi){
   for(let md=0;md<3;md++){
     for(let mi=0;mi<2;mi++){
       const key=`g${gi}_m${md*2+mi}`;
-      const[hi,ai]=MDS[md][mi];
+      const[hi,ai]=MATCH_PAIRS[gi][md][mi];
       const hid=tids[hi],aid=tids[ai];
       const r=results[key];
       let gA,gB,isReal=false;
@@ -1193,7 +1260,7 @@ function calcTableLocked(gi){
       const key=`g${gi}_m${md*2+mi}`;
       const r=results[key];
       if(!r||!r.locked) continue;
-      const[hi,ai]=MDS[md][mi];
+      const[hi,ai]=MATCH_PAIRS[gi][md][mi];
       const hid=tids[hi],aid=tids[ai];
       const gA=r.goalsA,gB=r.goalsB;
       const h=tb[lk[hid]],a=tb[lk[aid]];
@@ -1313,7 +1380,7 @@ function renderAllGames(){
         // Normalize: day 24→Jun24, but times like 00:00 on Jun14 belong to Jun14 calendar night
         // We treat the time as-is (already in CH/MESZ)
         const sortKey=day*10000+hh*100+mm;
-        const[hi,ai]=MDS[md][mi];
+        const[hi,ai]=MATCH_PAIRS[gi][md][mi];
         const key=`g${gi}_m${md*2+mi}`;
         allMatches.push({gi,md,mi,matchTime,sortKey,hid:tids[hi],aid:tids[ai],key,groupLabel:GN[gi]});
       }
@@ -1485,7 +1552,7 @@ function renderGroup(gi){
     const mdLabel=d0===d1?d0:`${d0} / ${d1}`;
     h+=`<div class="matchday"><div class="matchday-title"><span>Spieltag ${md+1}</span><span class="md-date">${mdLabel}</span></div>`;
     for(let mi=0;mi<2;mi++){
-      const[hi,ai]=MDS[md][mi];
+      const[hi,ai]=MATCH_PAIRS[gi][md][mi];
       const hid=tids[hi],aid=tids[ai];
       const key=`g${gi}_m${md*2+mi}`;
       const r=results[key]||{goalsA:'',goalsB:'',locked:false};
@@ -1659,7 +1726,7 @@ function calcGroupScore(gi, tipFn){
       const key = `g${gi}_m${md*2+mi}`;
       const r = results[key];
       if(!r || !r.locked) continue;
-      const [hi,ai] = MDS[md][mi];
+      const [hi,ai] = MATCH_PAIRS[gi][md][mi];
       const hid = tids[hi], aid = tids[ai];
       const tip = tipFn(hid, aid);
       const p = calcTippPoints(tip.goalsA, tip.goalsB, r.goalsA, r.goalsB);
@@ -2077,7 +2144,7 @@ function genExport(){
     const tids=GROUPS[gi];
     for(let md=0;md<3;md++){
       for(let mi=0;mi<2;mi++){
-        const[hi,ai]=MDS[md][mi];
+        const[hi,ai]=MATCH_PAIRS[gi][md][mi];
         const hid=tids[hi],aid=tids[ai];
         const key=`g${gi}_m${md*2+mi}`;
         const r=results[key];
@@ -2174,7 +2241,7 @@ function buildMatchKeyMap(){
     const tids=GROUPS[gi];
     for(let md=0;md<3;md++){
       for(let mi=0;mi<2;mi++){
-        const[hi,ai]=MDS[md][mi];
+        const[hi,ai]=MATCH_PAIRS[gi][md][mi];
         const key=`g${gi}_m${md*2+mi}`;
         const pair=[tids[hi],tids[ai]].sort((a,b)=>a-b).join('_');
         map[pair]=key;
@@ -2256,7 +2323,7 @@ async function apiUpdateResults(){
       const mi=parseInt(parts[1].slice(1));
       const md=Math.floor(mi/2);
       const mmi=mi%2;
-      const [internalHi,internalAi]=MDS[md][mmi];
+      const [internalHi,internalAi]=MATCH_PAIRS[gi][md][mmi];
       const internalH=GROUPS[gi][internalHi];
       const internalA=GROUPS[gi][internalAi];
 
@@ -2979,7 +3046,7 @@ function bind(){
     for(let md=0;md<3;md++)for(let mi=0;mi<2;mi++){
       const k=`g${gi}_m${md*2+mi}`;
       if(!results[k]||!results[k].locked){
-        const[hi,ai]=MDS[md][mi];
+        const[hi,ai]=MATCH_PAIRS[gi][md][mi];
         const s=sampleMatch(tids[hi],tids[ai]);
         results[k]={goalsA:s.goalsA,goalsB:s.goalsB,locked:false};
       }
@@ -2995,7 +3062,7 @@ function bind(){
       for(let md=0;md<3;md++)for(let mi=0;mi<2;mi++){
         const k=`g${gi}_m${md*2+mi}`;
         if(!results[k]||!results[k].locked){
-          const[hi,ai]=MDS[md][mi];
+          const[hi,ai]=MATCH_PAIRS[gi][md][mi];
           const pr=predictMatch(tids[hi],tids[ai]);
           results[k]={goalsA:pr.goalsA,goalsB:pr.goalsB,locked:false};
         }
@@ -3012,7 +3079,7 @@ function bind(){
       for(let md=0;md<3;md++)for(let mi=0;mi<2;mi++){
         const k=`g${gi}_m${md*2+mi}`;
         if(!results[k]||!results[k].locked){
-          const[hi,ai]=MDS[md][mi];
+          const[hi,ai]=MATCH_PAIRS[gi][md][mi];
           const pr=predictMatchExt(tids[hi],tids[ai]);
           results[k]={goalsA:pr.goalsA,goalsB:pr.goalsB,locked:false};
         }
@@ -3029,7 +3096,7 @@ function bind(){
       for(let md=0;md<3;md++)for(let mi=0;mi<2;mi++){
         const k=`g${gi}_m${md*2+mi}`;
         if(!results[k]||!results[k].locked){
-          const[hi,ai]=MDS[md][mi];
+          const[hi,ai]=MATCH_PAIRS[gi][md][mi];
           const tp=topTipExtFn(tids[hi],tids[ai]);
           results[k]={goalsA:tp.goalsA,goalsB:tp.goalsB,locked:false};
         }
@@ -3062,7 +3129,7 @@ function bind(){
     for(let md=0;md<3;md++)for(let mi=0;mi<2;mi++){
       const k=`g${gi}_m${md*2+mi}`;
       if(!results[k]||!results[k].locked){
-        const[hi,ai]=MDS[md][mi];
+        const[hi,ai]=MATCH_PAIRS[gi][md][mi];
         const pr=predictMatch(tids[hi],tids[ai]);
         results[k]={goalsA:pr.goalsA,goalsB:pr.goalsB,locked:false};
       }
@@ -3076,7 +3143,7 @@ function bind(){
     for(let md=0;md<3;md++)for(let mi=0;mi<2;mi++){
       const k=`g${gi}_m${md*2+mi}`;
       if(!results[k]||!results[k].locked){
-        const[hi,ai]=MDS[md][mi];
+        const[hi,ai]=MATCH_PAIRS[gi][md][mi];
         const pr=predictMatchExt(tids[hi],tids[ai]);
         results[k]={goalsA:pr.goalsA,goalsB:pr.goalsB,locked:false};
       }
@@ -3090,7 +3157,7 @@ function bind(){
     for(let md=0;md<3;md++)for(let mi=0;mi<2;mi++){
       const k=`g${gi}_m${md*2+mi}`;
       if(!results[k]||!results[k].locked){
-        const[hi,ai]=MDS[md][mi];
+        const[hi,ai]=MATCH_PAIRS[gi][md][mi];
         const tp=topTipExtFn(tids[hi],tids[ai]);
         results[k]={goalsA:tp.goalsA,goalsB:tp.goalsB,locked:false};
       }
