@@ -1811,7 +1811,7 @@ function renderOverview(){
     // Detail-Tabelle für geöffnetes Modell (ausserhalb des Flex-Containers)
     const detailPanel = (s, color, label) => {
       let d = `<div style="margin-top:10px;background:var(--bg2);border:1.5px solid ${color};border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)">`;
-      d += `<div style="font-size:.75em;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">${label} — Spieldetails</div>`;
+      d += `<div style="font-size:.75em;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">${label} — Spieldetails <span style="font-weight:400;font-style:italic">(${s.count} von ${Object.values(results).filter(r=>r&&r.locked).length} gesperrten Spielen)</span></div>`;
       d += `<table style="width:100%;border-collapse:collapse;font-size:.82em">`;
       d += `<thead><tr style="border-bottom:1.5px solid var(--border)">`;
       d += `<th style="text-align:left;padding:5px 6px;color:var(--txt3);font-weight:600;font-size:.78em;text-transform:uppercase;letter-spacing:.4px">Spiel</th>`;
