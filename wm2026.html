@@ -1051,7 +1051,6 @@ function recalcAllElos(){
   TEAMS.forEach(t=>t.elo=t.base);
   // Team-Stärken auf Basis-Werte zurücksetzen vor Neuberechnung
   TEAM_RATINGS.forEach((r,i)=>{ r.goalRate=DEFAULT_RATINGS[i].goalRate; r.balance=DEFAULT_RATINGS[i].balance; });
-  _prePredCache={}; // Cache leeren — wird unten pro gesperrtem Spiel befüllt
   for(let md=0;md<3;md++){
     for(let gi=0;gi<12;gi++){
       for(let mi=0;mi<2;mi++){
@@ -1060,35 +1059,9 @@ function recalcAllElos(){
         if(r&&r.locked){
           const tids=GROUPS[gi];
           const[hi,ai]=MATCH_PAIRS[gi][md][mi];
-          // Pre-Update-Vorhersagen cachen (alle 3 Modelle) — Elo-Stand VOR diesem Spiel
-          const pElo = predictMatch(tids[hi],tids[ai]);
-          const pPP  = predictMatchExt(tids[hi],tids[ai]);
-          const slPP = scoreLines(pPP.lA, pPP.lB, 7);
-          _prePredCache[k] = {
-            elo:   {goalsA: pElo.goalsA,  goalsB: pElo.goalsB},
-            pp:    {goalsA: pPP.goalsA,   goalsB: pPP.goalsB},
-            toppp: {goalsA: slPP[0].a,    goalsB: slPP[0].b}
-          };
-          updateTeamRatings(tids[hi],tids[ai],r.goalsA,r.goalsB,pPP.lA,pPP.lB);
+          const prePred = predictMatchExt(tids[hi],tids[ai]); // Erwartung vor dem Spielzustands-Update
+          updateTeamRatings(tids[hi],tids[ai],r.goalsA,r.goalsB,prePred.lA,prePred.lB);
           updateEloSingle(tids[hi],tids[ai],r.goalsA,r.goalsB);
-        }
-      }
-    }
-  }
-  // Sanity-check: falls Cache komplett leer ist aber results gesperrte Spiele hat,
-  // Fallback auf direkte Berechnung (post-Elo, weniger korrekt aber besser als 0)
-  if(Object.keys(_prePredCache).length===0){
-    const lockedCount=Object.values(results).filter(r=>r&&r.locked).length;
-    if(lockedCount>0){
-      for(let md=0;md<3;md++) for(let gi=0;gi<12;gi++) for(let mi=0;mi<2;mi++){
-        const k=`g${gi}_m${md*2+mi}`;
-        const r=results[k];
-        if(r&&r.locked){
-          const tids=GROUPS[gi]; const[hi,ai]=MATCH_PAIRS[gi][md][mi];
-          const pElo=predictMatch(tids[hi],tids[ai]);
-          const pPP=predictMatchExt(tids[hi],tids[ai]);
-          const slPP=scoreLines(pPP.lA,pPP.lB,7);
-          _prePredCache[k]={elo:{goalsA:pElo.goalsA,goalsB:pElo.goalsB},pp:{goalsA:pPP.goalsA,goalsB:pPP.goalsB},toppp:{goalsA:slPP[0].a,goalsB:slPP[0].b}};
         }
       }
     }
@@ -1209,7 +1182,6 @@ let activeTab='overview';
 let paramsOpen=false;
 let overviewLockedOnly=false; // Toggle: nur gesperrte Resultate in Gruppenübersicht
 let activeScoringModel=null; // 'elo'|'pp'|'toppp' — aufgeklapptes Detail-Panel
-let _prePredCache={}; // key → {elo:{goalsA,goalsB}, pp:{goalsA,goalsB}, toppp:{goalsA,goalsB}}
 let bracketLockedOnly=false;   // Toggle: nur gesperrte Resultate im Turnierbaum
 let selectedBracketGroup=null;  // Highlighted group in bracket view
 let apiToken='';
@@ -1236,7 +1208,7 @@ function load(){
         s.ratings.forEach((r,i)=>{if(TEAM_RATINGS[i]){TEAM_RATINGS[i].goalRate=r.goalRate??r.atk??TEAM_RATINGS[i].goalRate;TEAM_RATINGS[i].balance=r.balance??0;}});
     }
     recalcAllElos();
-  }catch(e){ console.error('load() error:', e); }
+  }catch(e){}
 }
 
 // ============================================================
@@ -1735,21 +1707,18 @@ function renderParams(){
 // 0P = alles andere
 // ============================================================
 function calcTippPoints(predA, predB, realA, realB){
-  // parseInt sichert gegen String/Number-Mischtypen aus localStorage
-  const pA=parseInt(predA), pB=parseInt(predB), rA=parseInt(realA), rB=parseInt(realB);
-  if(isNaN(pA)||isNaN(pB)||isNaN(rA)||isNaN(rB)) return 0;
-  const predWin = pA > pB ? 'A' : pA < pB ? 'B' : 'D';
-  const realWin = rA > rB ? 'A' : rA < rB ? 'B' : 'D';
-  if(pA === rA && pB === rB) return 4;
+  const predWin = predA > predB ? 'A' : predA < predB ? 'B' : 'D';
+  const realWin = realA > realB ? 'A' : realA < realB ? 'B' : 'D';
+  if(predA === realA && predB === realB) return 4;
   if(predWin !== realWin) return 0;
-  if(predWin === 'D') return 2;
-  if((pA - pB) === (rA - rB)) return 3;
-  return 2;
+  if(predWin === 'D') return 2; // Unentschieden korrekt, falsches Ergebnis
+  if((predA - predB) === (realA - realB)) return 3; // gleiche Tordifferenz
+  return 2; // nur Sieger richtig
 }
 
 // Für eine Gruppe alle gesperrten Spiele auswerten
-// modelKey: 'elo'|'pp'|'toppp' — liest Pre-Game-Vorhersage aus _prePredCache
-function calcGroupScore(gi, modelKey){
+// tipFn(hid, aid) → {goalsA, goalsB}
+function calcGroupScore(gi, tipFn){
   const tids = GROUPS[gi];
   let pts = 0, count = 0, matches = [];
   for(let md=0;md<3;md++){
@@ -1759,15 +1728,7 @@ function calcGroupScore(gi, modelKey){
       if(!r || !r.locked) continue;
       const [hi,ai] = MATCH_PAIRS[gi][md][mi];
       const hid = tids[hi], aid = tids[ai];
-      // Pre-Game-Tipp aus Cache — korrekte Vorhersage VOR Elo-Update dieses Spiels
-      const cached = _prePredCache[key];
-      let tip = cached ? cached[modelKey] : null;
-      if(!tip){
-        // Cache-Miss Fallback: aktuelle Vorhersage (weniger korrekt aber zeigt das Spiel)
-        const pFb = modelKey==='elo' ? predictMatch(hid,aid) : predictMatchExt(hid,aid);
-        if(modelKey==='toppp'){ const sl=scoreLines(pFb.lA,pFb.lB,7); tip={goalsA:sl[0].a,goalsB:sl[0].b}; }
-        else tip={goalsA:pFb.goalsA,goalsB:pFb.goalsB};
-      }
+      const tip = tipFn(hid, aid);
       const p = calcTippPoints(tip.goalsA, tip.goalsB, r.goalsA, r.goalsB);
       pts += p; count++;
       matches.push({gi, hid, aid, realA:r.goalsA, realB:r.goalsB, tipA:tip.goalsA, tipB:tip.goalsB, pts:p});
@@ -1776,11 +1737,11 @@ function calcGroupScore(gi, modelKey){
   return {pts, count, matches};
 }
 
-// Summiert über alle Gruppen — modelKey: 'elo'|'pp'|'toppp'
-function calcTotalScore(modelKey){
+// Summiert über alle Gruppen
+function calcTotalScore(tipFn){
   let pts=0, count=0, matches=[];
   for(let gi=0;gi<12;gi++){
-    const s = calcGroupScore(gi, modelKey);
+    const s = calcGroupScore(gi, tipFn);
     pts += s.pts; count += s.count; matches.push(...s.matches);
   }
   return {pts, count, matches};
@@ -1814,9 +1775,9 @@ function renderOverview(){
   h+=`</div>`;
 
   // ── Tippspiel-Scoring (gesperrte Spiele) ──────────────────────────────────
-  const sElo   = calcTotalScore('elo');
-  const sPP    = calcTotalScore('pp');
-  const sTopPP = calcTotalScore('toppp');
+  const sElo   = calcTotalScore((hid,aid) => { const p=predictMatch(hid,aid);    return {goalsA:p.goalsA,goalsB:p.goalsB}; });
+  const sPP    = calcTotalScore((hid,aid) => { const p=predictMatchExt(hid,aid); return {goalsA:p.goalsA,goalsB:p.goalsB}; });
+  const sTopPP = calcTotalScore(topTipExtFn);
   const totalLocked = sElo.count;
   const maxPts  = totalLocked * 4;
 
@@ -1850,7 +1811,7 @@ function renderOverview(){
     // Detail-Tabelle für geöffnetes Modell (ausserhalb des Flex-Containers)
     const detailPanel = (s, color, label) => {
       let d = `<div style="margin-top:10px;background:var(--bg2);border:1.5px solid ${color};border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)">`;
-      d += `<div style="font-size:.75em;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">${label} — Spieldetails (${s.count} Spiele)</div>`;
+      d += `<div style="font-size:.75em;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">${label} — Spieldetails</div>`;
       d += `<table style="width:100%;border-collapse:collapse;font-size:.82em">`;
       d += `<thead><tr style="border-bottom:1.5px solid var(--border)">`;
       d += `<th style="text-align:left;padding:5px 6px;color:var(--txt3);font-weight:600;font-size:.78em;text-transform:uppercase;letter-spacing:.4px">Spiel</th>`;
