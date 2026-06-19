@@ -1051,6 +1051,7 @@ function recalcAllElos(){
   TEAMS.forEach(t=>t.elo=t.base);
   // Team-Stärken auf Basis-Werte zurücksetzen vor Neuberechnung
   TEAM_RATINGS.forEach((r,i)=>{ r.goalRate=DEFAULT_RATINGS[i].goalRate; r.balance=DEFAULT_RATINGS[i].balance; });
+  _prePredCache={}; // Cache leeren — wird unten pro gesperrtem Spiel befüllt
   for(let md=0;md<3;md++){
     for(let gi=0;gi<12;gi++){
       for(let mi=0;mi<2;mi++){
@@ -1059,8 +1060,16 @@ function recalcAllElos(){
         if(r&&r.locked){
           const tids=GROUPS[gi];
           const[hi,ai]=MATCH_PAIRS[gi][md][mi];
-          const prePred = predictMatchExt(tids[hi],tids[ai]); // Erwartung vor dem Spielzustands-Update
-          updateTeamRatings(tids[hi],tids[ai],r.goalsA,r.goalsB,prePred.lA,prePred.lB);
+          // Pre-Update-Vorhersagen cachen (alle 3 Modelle) — Elo-Stand VOR diesem Spiel
+          const pElo = predictMatch(tids[hi],tids[ai]);
+          const pPP  = predictMatchExt(tids[hi],tids[ai]);
+          const slPP = scoreLines(pPP.lA, pPP.lB, 7);
+          _prePredCache[k] = {
+            elo:   {goalsA: pElo.goalsA,  goalsB: pElo.goalsB},
+            pp:    {goalsA: pPP.goalsA,   goalsB: pPP.goalsB},
+            toppp: {goalsA: slPP[0].a,    goalsB: slPP[0].b}
+          };
+          updateTeamRatings(tids[hi],tids[ai],r.goalsA,r.goalsB,pPP.lA,pPP.lB);
           updateEloSingle(tids[hi],tids[ai],r.goalsA,r.goalsB);
         }
       }
@@ -1182,6 +1191,7 @@ let activeTab='overview';
 let paramsOpen=false;
 let overviewLockedOnly=false; // Toggle: nur gesperrte Resultate in Gruppenübersicht
 let activeScoringModel=null; // 'elo'|'pp'|'toppp' — aufgeklapptes Detail-Panel
+let _prePredCache={}; // key → {elo:{goalsA,goalsB}, pp:{goalsA,goalsB}, toppp:{goalsA,goalsB}}
 let bracketLockedOnly=false;   // Toggle: nur gesperrte Resultate im Turnierbaum
 let selectedBracketGroup=null;  // Highlighted group in bracket view
 let apiToken='';
@@ -1717,8 +1727,8 @@ function calcTippPoints(predA, predB, realA, realB){
 }
 
 // Für eine Gruppe alle gesperrten Spiele auswerten
-// tipFn(hid, aid) → {goalsA, goalsB}
-function calcGroupScore(gi, tipFn){
+// modelKey: 'elo'|'pp'|'toppp' — liest Pre-Game-Vorhersage aus _prePredCache
+function calcGroupScore(gi, modelKey){
   const tids = GROUPS[gi];
   let pts = 0, count = 0, matches = [];
   for(let md=0;md<3;md++){
@@ -1728,7 +1738,9 @@ function calcGroupScore(gi, tipFn){
       if(!r || !r.locked) continue;
       const [hi,ai] = MATCH_PAIRS[gi][md][mi];
       const hid = tids[hi], aid = tids[ai];
-      const tip = tipFn(hid, aid);
+      // Pre-Game-Tipp aus Cache — korrekte Vorhersage VOR Elo-Update dieses Spiels
+      const cached = _prePredCache[key];
+      const tip = cached ? cached[modelKey] : {goalsA:1, goalsB:1}; // Fallback sollte nie eintreten
       const p = calcTippPoints(tip.goalsA, tip.goalsB, r.goalsA, r.goalsB);
       pts += p; count++;
       matches.push({gi, hid, aid, realA:r.goalsA, realB:r.goalsB, tipA:tip.goalsA, tipB:tip.goalsB, pts:p});
@@ -1737,11 +1749,11 @@ function calcGroupScore(gi, tipFn){
   return {pts, count, matches};
 }
 
-// Summiert über alle Gruppen
-function calcTotalScore(tipFn){
+// Summiert über alle Gruppen — modelKey: 'elo'|'pp'|'toppp'
+function calcTotalScore(modelKey){
   let pts=0, count=0, matches=[];
   for(let gi=0;gi<12;gi++){
-    const s = calcGroupScore(gi, tipFn);
+    const s = calcGroupScore(gi, modelKey);
     pts += s.pts; count += s.count; matches.push(...s.matches);
   }
   return {pts, count, matches};
@@ -1775,9 +1787,9 @@ function renderOverview(){
   h+=`</div>`;
 
   // ── Tippspiel-Scoring (gesperrte Spiele) ──────────────────────────────────
-  const sElo   = calcTotalScore((hid,aid) => { const p=predictMatch(hid,aid);    return {goalsA:p.goalsA,goalsB:p.goalsB}; });
-  const sPP    = calcTotalScore((hid,aid) => { const p=predictMatchExt(hid,aid); return {goalsA:p.goalsA,goalsB:p.goalsB}; });
-  const sTopPP = calcTotalScore(topTipExtFn);
+  const sElo   = calcTotalScore('elo');
+  const sPP    = calcTotalScore('pp');
+  const sTopPP = calcTotalScore('toppp');
   const totalLocked = sElo.count;
   const maxPts  = totalLocked * 4;
 
