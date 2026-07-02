@@ -1938,7 +1938,11 @@ function renderOverview(){
 
 function renderKO(){
   let h=`<h2 style="color:var(--gold);margin-bottom:6px">K.o.-Phase — Turnierbaum</h2>`;
-  h+=`<div class="actions" style="margin-bottom:12px"><button class="btn btn-outline" id="clearKO" style="margin-left:4px">🗑 Alle KO-Tipps löschen</button></div>`;
+  h+=`<div class="actions" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">`;
+  h+=`<button class="btn btn-gold" id="fillKO">🔮 Offene mit Modell-Tipp füllen</button>`;
+  h+=`<button class="btn" id="fillKOTopPP" style="background:#f09c00;color:#fff">🔝 Offene mit Top-Tipp (PP) füllen</button>`;
+  h+=`<button class="btn btn-outline" id="clearKO" style="margin-left:4px">🗑 Alle KO-Tipps löschen</button>`;
+  h+=`</div>`;
   h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:16px">
     🔮 Prognose (grau) · ✅ Gespielt/gesperrt (grün) · ⏳ Teams noch nicht bekannt (ausgegraut)<br>
     Ergebnis = nach 90 Min. (+ evtl. Verlängerung). Bei Elfmeterschiessen: Sieger separat markieren.
@@ -1980,6 +1984,8 @@ function renderKOCard(m){
   // Ext prediction (only when teams are known)
   const predExt = (isKnown && dispAid !== null && dispBid !== null)
     ? predictMatchExt(dispAid, dispBid) : null;
+  const predTopPP = (isKnown && dispAid !== null && dispBid !== null)
+    ? topTipExtFn(dispAid, dispBid) : null;
 
   // Status badge
   if(isLocked)      h+=`<div class="ko-status real">✅ Gespielt · ${m.label} · ${m.date}</div>`;
@@ -2032,6 +2038,20 @@ function renderKOCard(m){
       h+=`<div class="pred-col-score" style="font-size:1em;color:var(--txt3)">–</div>`;
     }
     h+=`</div>`;
+
+    h+=`<div class="pred-divider"></div>`;
+
+    h+=`<div class="pred-col pred-col-top">`;
+    h+=`<div class="pred-col-label" style="color:#f09c00">🔝 Top-Tipp PP</div>`;
+    if(predTopPP){
+      const changedTop = predExt && (predTopPP.goalsA!==predExt.goalsA || predTopPP.goalsB!==predExt.goalsB);
+      h+=`<div class="pred-col-score ${changedTop?'pred-col-score-diff':''}" style="${changedTop?'color:#f09c00':''}">${predTopPP.goalsA}<span class="sep">:</span>${predTopPP.goalsB}</div>`;
+      h+=`<div class="pred-col-meta"><span style="color:var(--txt3)">Poisson-Max</span></div>`;
+      h+=`<button class="pred-take-btn" style="border-color:rgba(240,156,0,.4);color:#c47f00" data-ko="${m.id}" data-a="${predTopPP.goalsA}" data-b="${predTopPP.goalsB}">↙ Übernehmen</button>`;
+    }else{
+      h+=`<div class="pred-col-score" style="font-size:1em;color:var(--txt3)">–</div>`;
+    }
+    h+=`</div>`;
     h+=`</div>`; // pred-cols
   }
 
@@ -2064,6 +2084,7 @@ function renderKOCard(m){
     h+=`<div class="pred-was">`;
     if(pred) h+=`Elo: ${pred.goalsA}:${pred.goalsB}`;
     if(pred&&predExt) h+=` · Stärken: ${predExt.goalsA}:${predExt.goalsB}`;
+    if(pred&&predTopPP) h+=` · Top-PP: ${predTopPP.goalsA}:${predTopPP.goalsB}`;
     h+=`</div>`;
     h+=`<div style="text-align:center;margin-top:8px"><button class="btn-lock unlock" data-ko="${m.id}">🔓 Entsperren</button></div>`;
   }
@@ -2251,6 +2272,21 @@ function buildMatchKeyMap(){
   return map;
 }
 
+// K.o.-Match key lookup: [teamIdA, teamIdB] → KO_BRACKET match id (z.B. 'r32_3')
+// Muss NEU aufgebaut werden nachdem koResults sich ändern, da spätere Runden
+// (R16, VF, ...) erst auflösbar sind, sobald die Vorrunde gesperrt ist.
+function buildKOKeyMap(){
+  const map={};
+  KO_BRACKET.forEach(m=>{
+    const tA=resolveSlot(m.slotA);
+    const tB=resolveSlot(m.slotB);
+    if(tA==null||tB==null) return;
+    const pair=[tA,tB].sort((a,b)=>a-b).join('_');
+    map[pair]=m.id;
+  });
+  return map;
+}
+
 // ============================================================
 // API FUNCTIONS
 // ============================================================
@@ -2345,13 +2381,91 @@ async function apiUpdateResults(){
     }
 
     recalcAllElos();
+
+    // ── K.o.-Spiele (Sechzehntelfinale bis Finale) ──────────────────────────
+    // Werden separat behandelt, weil sich die Team-Paarung erst dynamisch aus
+    // den bereits gesperrten Vorrunden-/K.o.-Ergebnissen ergibt (resolveSlot()).
+    let koNewCount=0, koSkipCount=0, koWarnCount=0;
+    const koMatches=matches.filter(m=>!(m.stage==='GROUP_STAGE'||m.group));
+    koMatches.sort((a,b)=>new Date(a.utcDate)-new Date(b.utcDate));
+
+    for(const m of koMatches){
+      if(m.status!=='FINISHED') continue;
+
+      const hName=m.homeTeam?.name||'';
+      const aName=m.awayTeam?.name||'';
+      const hId=FD_NAME_MAP[hName];
+      const aId=FD_NAME_MAP[aName];
+
+      if(hId===undefined||aId===undefined){
+        updateLog.push({type:'warn',msg:`K.o.: Unbekannte Teams "${hName}" vs "${aName}"`});
+        koWarnCount++;
+        continue;
+      }
+
+      // Frisch aufbauen: hängt von bereits in dieser Schleife gesperrten Runden ab
+      const koMap=buildKOKeyMap();
+      const pair=[hId,aId].sort((a,b)=>a-b).join('_');
+      const matchId=koMap[pair];
+      if(!matchId){
+        updateLog.push({type:'warn',msg:`K.o.: Kein Bracket-Slot für ${TEAMS[hId].name} vs ${TEAMS[aId].name} (Vorrunde evtl. noch nicht vollständig gesperrt)`});
+        koWarnCount++;
+        continue;
+      }
+
+      let gA=m.score?.fullTime?.home??null;
+      let gB=m.score?.fullTime?.away??null;
+      // Bei Unentschieden nach 90 Min. ggf. Verlängerungsresultat nehmen
+      if(gA!==null&&gB!==null&&gA===gB&&m.score?.extraTime&&m.score.extraTime.home!=null&&m.score.extraTime.away!=null){
+        gA=m.score.extraTime.home; gB=m.score.extraTime.away;
+      }
+      if(gA===null||gB===null) continue;
+
+      // Elfmeterschiessen-Sieger ermitteln
+      let pensHome=null;
+      if(gA===gB){
+        const pen=m.score?.penalties;
+        if(pen&&pen.home!=null&&pen.away!=null){
+          pensHome = pen.home>pen.away;
+        } else if(m.score?.winner==='HOME_TEAM'){ pensHome=true; }
+        else if(m.score?.winner==='AWAY_TEAM'){ pensHome=false; }
+      }
+
+      const bm=KO_BRACKET.find(x=>x.id===matchId);
+      const slotAId=resolveSlot(bm.slotA);
+
+      // Orientierung angleichen: slotA/slotB statt API-home/away
+      let finalA,finalB,finalPens=null;
+      if(slotAId===hId){
+        finalA=gA; finalB=gB;
+        if(pensHome!==null) finalPens = pensHome ? 'A' : 'B';
+      } else {
+        finalA=gB; finalB=gA;
+        if(pensHome!==null) finalPens = pensHome ? 'B' : 'A';
+      }
+
+      const tA=TEAMS[resolveSlot(bm.slotA)], tB=TEAMS[resolveSlot(bm.slotB)];
+      const existing=koResults[matchId];
+      if(existing&&existing.locked&&existing.goalsA===finalA&&existing.goalsB===finalB&&existing.pens===finalPens){
+        koSkipCount++;
+        updateLog.push({type:'skip',msg:`${bm.label}: ${tA.name} ${finalA}:${finalB} ${tB.name} (bereits gesperrt)`});
+      } else {
+        const isNew=!existing||!existing.locked;
+        koResults[matchId]={goalsA:finalA,goalsB:finalB,locked:true,pens:finalPens};
+        koNewCount++;
+        const pensNote=finalPens?` (n.E. ${finalPens==='A'?tA.name:tB.name})`:'';
+        updateLog.push({type:'new',msg:`${bm.label}: ${tA.flag} ${tA.name} ${finalA}:${finalB} ${tB.name} ${tB.flag}${pensNote}${isNew?'  ✅ NEU':'  🔄 Aktualisiert'}`});
+      }
+    }
+    if(koNewCount>0) saveKO();
+
     apiLastUpdate=new Date().toLocaleString('de-CH');
     apiStatus='ok';
     const played=groupMatches.filter(m=>m.status==='FINISHED').length;
-    apiStatusMsg=`✅ ${played}/72 Gruppenspiele gespielt · ${newCount} neu/aktualisiert · ${skipCount} unverändert${warnCount>0?` · ⚠ ${warnCount} Warnungen`:''}`;
+    apiStatusMsg=`✅ ${played}/72 Gruppenspiele · ${newCount} neu/aktualisiert, ${skipCount} unverändert${warnCount>0?` · ⚠ ${warnCount} Warnungen`:''} · K.o.: ${koNewCount} neu/aktualisiert, ${koSkipCount} unverändert${koWarnCount>0?` · ⚠ ${koWarnCount} Warnungen`:''}`;
 
-    if(newCount>0){
-      updateLog.unshift({type:'new',msg:`🎉 ${newCount} Ergebnis(se) neu eingetragen und gesperrt!`});
+    if(newCount>0||koNewCount>0){
+      updateLog.unshift({type:'new',msg:`🎉 ${newCount+koNewCount} Ergebnis(se) neu eingetragen und gesperrt! (${newCount} Gruppe, ${koNewCount} K.o.)`});
     }else{
       updateLog.unshift({type:'skip',msg:`ℹ Alle bekannten Ergebnisse waren bereits aktuell.`});
     }
@@ -2371,7 +2485,7 @@ async function apiUpdateResults(){
 // ============================================================
 function renderAPI(){
   let h=`<h2 style="color:var(--gold);margin-bottom:6px">🌐 Live-Update via football-data.org</h2>`;
-  h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:20px">Trägt alle abgeschlossenen Gruppenspiele automatisch ein und sperrt sie. Der API-Key liegt serverseitig in Vercel und wird nicht mehr im Browser gespeichert.</p>`;
+  h+=`<p style="color:var(--txt2);font-size:.82em;margin-bottom:20px">Trägt alle abgeschlossenen Gruppen- und K.o.-Spiele (Sechzehntelfinale bis Finale) automatisch ein und sperrt sie. Der API-Key liegt serverseitig in Vercel und wird nicht mehr im Browser gespeichert.</p>`;
 
   // Proxy/API section
   h+=`<div class="api-section"><h3>1. Verbindung prüfen</h3>`;
@@ -3305,6 +3419,86 @@ function bind(){
 
     // Write auto-filled results into koResults as UNLOCKED predictions
     // (real locked results keep their locked:true)
+    Object.keys(tempKR).forEach(mid=>{
+      if(tempKR[mid].autoFilled){
+        koResults[mid]={
+          goalsA:tempKR[mid].goalsA,
+          goalsB:tempKR[mid].goalsB,
+          locked:false,
+          pens:null
+        };
+      }
+    });
+
+    saveKO(); render();
+  };
+
+  // Fill all KO predictions — Top-Tipp (PP)
+  const fkotpp=document.getElementById('fillKOTopPP');
+  if(fkotpp) fkotpp.onclick=()=>{
+    const tempKR={};
+    Object.keys(koResults).forEach(k=>{
+      if(koResults[k]&&koResults[k].locked) tempKR[k]={...koResults[k]};
+    });
+
+    const rounds=[
+      ['r32_1','r32_2','r32_3','r32_4','r32_5','r32_6','r32_7','r32_8',
+       'r32_9','r32_10','r32_11','r32_12','r32_13','r32_14','r32_15','r32_16'],
+      ['r16_1','r16_2','r16_3','r16_4','r16_5','r16_6','r16_7','r16_8'],
+      ['qf_1','qf_2','qf_3','qf_4'],
+      ['sf_1','sf_2'],
+      ['3p_1','final_1'],
+    ];
+
+    function resolveForFillTPP(slot){
+      if(slot.src==='grp'){
+        const gi=GN.indexOf(slot.g);
+        const tb=calcTable(gi);
+        return tb[slot.pos-1]?.id ?? null;
+      }
+      if(slot.src==='grp3'){
+        const assignments = getThirdAssignments();
+        const m = KO_BRACKET.find(x=>x.slotA===slot||x.slotB===slot);
+        if(!m) return null;
+        const si = m.slotA===slot ? 0 : 1;
+        return assignments.get(m.id+'_'+si) ?? null;
+      }
+      const kr=tempKR[slot.id];
+      if(!kr) return null;
+      const m=KO_BRACKET.find(x=>x.id===slot.id);
+      if(!m) return null;
+      const tA=resolveForFillTPP(m.slotA), tB=resolveForFillTPP(m.slotB);
+      if(tA===null||tB===null) return null;
+      const gA=kr.goalsA, gB=kr.goalsB;
+      if(slot.w){
+        if(gA>gB) return tA;
+        if(gB>gA) return tB;
+        if(kr.pens==='A') return tA;
+        if(kr.pens==='B') return tB;
+        return tA;
+      } else {
+        if(gA>gB) return tB;
+        if(gB>gA) return tA;
+        return tB;
+      }
+    }
+
+    for(const roundMatches of rounds){
+      for(const mid of roundMatches){
+        if(koResults[mid]&&koResults[mid].locked) continue;
+        const m=KO_BRACKET.find(x=>x.id===mid);
+        if(!m) continue;
+        const tAid=resolveForFillTPP(m.slotA);
+        const tBid=resolveForFillTPP(m.slotB);
+        if(tAid===null||tBid===null) continue;
+        const ext=predictMatchExt(tAid,tBid);
+        const sl=scoreLines(ext.lA,ext.lB,7);
+        let gA=sl[0].a, gB=sl[0].b;
+        if(gA===gB){ if(ext.pW>=ext.pL) gA++; else gB++; }
+        tempKR[mid]={goalsA:gA,goalsB:gB,pens:null,autoFilled:true};
+      }
+    }
+
     Object.keys(tempKR).forEach(mid=>{
       if(tempKR[mid].autoFilled){
         koResults[mid]={
