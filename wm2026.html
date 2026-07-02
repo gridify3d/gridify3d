@@ -1737,13 +1737,32 @@ function calcGroupScore(gi, tipFn){
   return {pts, count, matches};
 }
 
-// Summiert über alle Gruppen
+// Für alle gesperrten K.o.-Spiele auswerten (gleiche Punkteskala wie Gruppenspiele)
+// tipFn(hid, aid) → {goalsA, goalsB}
+function calcKOScore(tipFn){
+  let pts = 0, count = 0, matches = [];
+  KO_BRACKET.forEach(m=>{
+    const kr = koResults[m.id];
+    if(!kr || !kr.locked) return;
+    const hid = resolveSlot(m.slotA), aid = resolveSlot(m.slotB);
+    if(hid===null || aid===null) return;
+    const tip = tipFn(hid, aid);
+    const p = calcTippPoints(tip.goalsA, tip.goalsB, kr.goalsA, kr.goalsB);
+    pts += p; count++;
+    matches.push({hid, aid, realA:kr.goalsA, realB:kr.goalsB, tipA:tip.goalsA, tipB:tip.goalsB, pts:p, label:m.label, round:m.round});
+  });
+  return {pts, count, matches};
+}
+
+// Summiert über alle Gruppen + alle K.o.-Spiele
 function calcTotalScore(tipFn){
   let pts=0, count=0, matches=[];
   for(let gi=0;gi<12;gi++){
     const s = calcGroupScore(gi, tipFn);
     pts += s.pts; count += s.count; matches.push(...s.matches);
   }
+  const ko = calcKOScore(tipFn);
+  pts += ko.pts; count += ko.count; matches.push(...ko.matches);
   return {pts, count, matches};
 }
 
@@ -1810,8 +1829,10 @@ function renderOverview(){
     };
     // Detail-Tabelle für geöffnetes Modell (ausserhalb des Flex-Containers)
     const detailPanel = (s, color, label) => {
+      const totalLockedAll = Object.values(results).filter(r=>r&&r.locked).length
+        + Object.values(koResults).filter(r=>r&&r.locked).length;
       let d = `<div style="margin-top:10px;background:var(--bg2);border:1.5px solid ${color};border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)">`;
-      d += `<div style="font-size:.75em;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">${label} — Spieldetails <span style="font-weight:400;font-style:italic">(${s.count} von ${Object.values(results).filter(r=>r&&r.locked).length} gesperrten Spielen)</span></div>`;
+      d += `<div style="font-size:.75em;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">${label} — Spieldetails <span style="font-weight:400;font-style:italic">(${s.count} von ${totalLockedAll} gesperrten Spielen, inkl. K.o.)</span></div>`;
       d += `<table style="width:100%;border-collapse:collapse;font-size:.82em">`;
       d += `<thead><tr style="border-bottom:1.5px solid var(--border)">`;
       d += `<th style="text-align:left;padding:5px 6px;color:var(--txt3);font-weight:600;font-size:.78em;text-transform:uppercase;letter-spacing:.4px">Spiel</th>`;
@@ -1822,8 +1843,9 @@ function renderOverview(){
       s.matches.forEach(m => {
         const tA = TEAMS[m.hid], tB = TEAMS[m.aid];
         const rowBg = m.pts===4?'rgba(52,199,89,.07)':m.pts===3?'rgba(28,110,243,.06)':m.pts===2?'rgba(240,156,0,.07)':'';
+        const koBadge = m.label ? `<span style="font-size:.68em;color:var(--txt3);margin-right:5px">${KO_ROUND_LABELS[m.round]||m.round} ${m.label}</span>` : '';
         d += `<tr style="border-bottom:1px solid var(--bg4);background:${rowBg}">`;
-        d += `<td style="padding:6px 6px">${tA.flag} <span style="font-weight:500">${tA.name}</span> <span style="color:var(--txt3);margin:0 3px">–</span> ${tB.flag} <span style="font-weight:500">${tB.name}</span></td>`;
+        d += `<td style="padding:6px 6px">${koBadge}${tA.flag} <span style="font-weight:500">${tA.name}</span> <span style="color:var(--txt3);margin:0 3px">–</span> ${tB.flag} <span style="font-weight:500">${tB.name}</span></td>`;
         d += `<td style="padding:6px 6px;text-align:center;font-weight:700;font-size:.95em">${m.realA}:${m.realB}</td>`;
         d += `<td style="padding:6px 6px;text-align:center;color:var(--txt2)">${m.tipA}:${m.tipB}</td>`;
         d += `<td style="padding:6px 6px;text-align:center">${ptsBadge(m.pts)}</td>`;
@@ -1835,7 +1857,7 @@ function renderOverview(){
     h += `<div style="margin-bottom:20px">`;
     h += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">`;
     h += `<h3 style="font-weight:700;font-size:.9em;color:var(--txt)">🏆 Modell-Scoring</h3>`;
-    h += `<span style="font-size:.72em;color:var(--txt3)">${totalLocked} gesperrte Spiele · max. ${maxPts} Punkte</span>`;
+    h += `<span style="font-size:.72em;color:var(--txt3)">${totalLocked} gesperrte Spiele (Gruppe + K.o.) · max. ${maxPts} Punkte</span>`;
     h += `</div>`;
     h += `<div style="display:flex;gap:10px;flex-wrap:wrap">`;
     h += scoreCard('Elo-Modell',    '📐', sElo,   'var(--txt)',  'Kalibrierter Tipp via Elo-Differenz',             'elo');
@@ -1986,6 +2008,11 @@ function renderKOCard(m){
     ? predictMatchExt(dispAid, dispBid) : null;
   const predTopPP = (isKnown && dispAid !== null && dispBid !== null)
     ? topTipExtFn(dispAid, dispBid) : null;
+  // Frisch berechnete Elo-Prognose — unabhängig vom koPredictions-Cache, der
+  // gesperrte Spiele bewusst ausspart. Wird für die "war"-Zeile bei gesperrten
+  // Spielen benötigt (analog zu den Gruppenspiel-Karten).
+  const predFreshElo = (isKnown && dispAid !== null && dispBid !== null)
+    ? predictMatch(dispAid, dispBid) : null;
 
   // Status badge
   if(isLocked)      h+=`<div class="ko-status real">✅ Gespielt · ${m.label} · ${m.date}</div>`;
@@ -2082,9 +2109,9 @@ function renderKOCard(m){
 
   if(isLocked){
     h+=`<div class="pred-was">`;
-    if(pred) h+=`Elo: ${pred.goalsA}:${pred.goalsB}`;
-    if(pred&&predExt) h+=` · Stärken: ${predExt.goalsA}:${predExt.goalsB}`;
-    if(pred&&predTopPP) h+=` · Top-PP: ${predTopPP.goalsA}:${predTopPP.goalsB}`;
+    if(predFreshElo) h+=`Elo: ${predFreshElo.goalsA}:${predFreshElo.goalsB}`;
+    if(predFreshElo&&predExt) h+=` · Modell: ${predExt.goalsA}:${predExt.goalsB}`;
+    if(predFreshElo&&predTopPP) h+=` · Top-PP: ${predTopPP.goalsA}:${predTopPP.goalsB}`;
     h+=`</div>`;
     h+=`<div style="text-align:center;margin-top:8px"><button class="btn-lock unlock" data-ko="${m.id}">🔓 Entsperren</button></div>`;
   }
