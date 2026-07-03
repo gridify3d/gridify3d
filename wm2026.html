@@ -248,7 +248,7 @@ img.emoji{width:1.15em;height:1.15em;vertical-align:-0.18em;display:inline-block
 <div class="tabs" id="tabs"></div>
 <div class="main" id="main"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@twemoji/api@latest/dist/twemoji.min.js"></script>
 <script>
 // ============================================================
 // DATA
@@ -493,87 +493,87 @@ const KO_ROUND_LABELS = {
   sf:'Halbfinale',final:'🏆 Finale','3p':'Spiel um Platz 3'
 };
 const KO_ROUND_DATES = {
-  r32:'29. Jun – 3. Jul',r16:'5.–8. Jul',qf:'11.–12. Jul',
-  sf:'15.–16. Jul',final:'19. Jul','3p':'18. Jul'
+  r32:'28. Jun – 3. Jul',r16:'4.–7. Jul',qf:'9.–11. Jul',
+  sf:'14.–15. Jul',final:'19. Jul','3p':'18. Jul'
 };
 
-// Offizielles Bracket laut FIFA (Match 74–89 = R32)
-// "Best 3rd X/Y/Z" = beste Dritte aus diesen Gruppen
+// Offizielles Bracket laut FIFA (Match 73–88 = R32, M89–96 = R16, M97–100 = VF,
+// M101–102 = HF, M103 = Spiel um Platz 3, M104 = Finale)
 const KO_BRACKET = [
-  // R32
-  {id:'r32_1', round:'r32', label:'M74', date:'29. Jun',
-    slotA:{src:'grp',g:'C',pos:1}, slotB:{src:'grp',g:'F',pos:2}},
+  // R32 (echte FIFA-Nummerierung M73–M88; war zuvor um 1 verschoben M74–M89)
+  {id:'r32_1', round:'r32', label:'M76', date:'29. Jun',
+    slotA:{src:'grp',g:'C',pos:1}, slotB:{src:'grp',g:'F',pos:2}}, // Brasilien vs Japan
   {id:'r32_2', round:'r32', label:'M75', date:'29. Jun',
-    slotA:{src:'grp',g:'F',pos:1}, slotB:{src:'grp',g:'C',pos:2}},
-  {id:'r32_3', round:'r32', label:'M76', date:'29. Jun',
-    slotA:{src:'grp',g:'E',pos:1}, slotB:{src:'grp3',groups:['D']}}, // Deutschland vs Paraguay (real)
+    slotA:{src:'grp',g:'F',pos:1}, slotB:{src:'grp',g:'C',pos:2}}, // Niederlande vs Marokko
+  {id:'r32_3', round:'r32', label:'M74', date:'29. Jun',
+    slotA:{src:'grp',g:'E',pos:1}, slotB:{src:'grp3',groups:['D']}}, // Deutschland vs Paraguay
   {id:'r32_4', round:'r32', label:'M77', date:'30. Jun',
-    slotA:{src:'grp',g:'I',pos:1}, slotB:{src:'grp3',groups:['F']}}, // Frankreich vs Schweden (real)
+    slotA:{src:'grp',g:'I',pos:1}, slotB:{src:'grp3',groups:['F']}}, // Frankreich vs Schweden
   {id:'r32_5', round:'r32', label:'M78', date:'30. Jun',
-    slotA:{src:'grp',g:'E',pos:2}, slotB:{src:'grp',g:'I',pos:2}},
+    slotA:{src:'grp',g:'E',pos:2}, slotB:{src:'grp',g:'I',pos:2}}, // Elfenbeinküste vs Norwegen
   {id:'r32_6', round:'r32', label:'M79', date:'30. Jun',
-    slotA:{src:'grp',g:'A',pos:1}, slotB:{src:'grp3',groups:['E']}}, // Mexiko vs Ecuador (real)
+    slotA:{src:'grp',g:'A',pos:1}, slotB:{src:'grp3',groups:['E']}}, // Mexiko vs Ecuador
   {id:'r32_7', round:'r32', label:'M80', date:'1. Jul',
-    slotA:{src:'grp',g:'L',pos:1}, slotB:{src:'grp3',groups:['K']}}, // England vs DR Kongo (real)
+    slotA:{src:'grp',g:'L',pos:1}, slotB:{src:'grp3',groups:['K']}}, // England vs DR Kongo
   {id:'r32_8', round:'r32', label:'M81', date:'1. Jul',
-    slotA:{src:'grp',g:'D',pos:1}, slotB:{src:'grp3',groups:['B']}}, // USA vs Bosnien-Herz. (real)
+    slotA:{src:'grp',g:'D',pos:1}, slotB:{src:'grp3',groups:['B']}}, // USA vs Bosnien-Herz.
   {id:'r32_9', round:'r32', label:'M82', date:'1. Jul',
-    slotA:{src:'grp',g:'G',pos:1}, slotB:{src:'grp3',groups:['I']}}, // Belgien vs Senegal (real)
+    slotA:{src:'grp',g:'G',pos:1}, slotB:{src:'grp3',groups:['I']}}, // Belgien vs Senegal
   {id:'r32_10',round:'r32', label:'M83', date:'2. Jul',
-    slotA:{src:'grp',g:'K',pos:2}, slotB:{src:'grp',g:'L',pos:2}},
+    slotA:{src:'grp',g:'K',pos:2}, slotB:{src:'grp',g:'L',pos:2}}, // Portugal vs Kroatien
   {id:'r32_11',round:'r32', label:'M84', date:'2. Jul',
-    slotA:{src:'grp',g:'H',pos:1}, slotB:{src:'grp',g:'J',pos:2}},
+    slotA:{src:'grp',g:'H',pos:1}, slotB:{src:'grp',g:'J',pos:2}}, // Spanien vs Österreich
   {id:'r32_12',round:'r32', label:'M85', date:'2. Jul',
-    slotA:{src:'grp',g:'B',pos:1}, slotB:{src:'grp3',groups:['J']}}, // Schweiz vs Algerien (real)
+    slotA:{src:'grp',g:'B',pos:1}, slotB:{src:'grp3',groups:['J']}}, // Schweiz vs Algerien
   {id:'r32_13',round:'r32', label:'M86', date:'3. Jul',
-    slotA:{src:'grp',g:'J',pos:1}, slotB:{src:'grp',g:'H',pos:2}},
+    slotA:{src:'grp',g:'J',pos:1}, slotB:{src:'grp',g:'H',pos:2}}, // Argentinien vs Kap Verde
   {id:'r32_14',round:'r32', label:'M87', date:'3. Jul',
-    slotA:{src:'grp',g:'K',pos:1}, slotB:{src:'grp3',groups:['L']}}, // Kolumbien vs Ghana (real)
-  {id:'r32_15',round:'r32', label:'M88', date:'3. Jul',
-    slotA:{src:'grp',g:'A',pos:2}, slotB:{src:'grp',g:'B',pos:2}},
-  {id:'r32_16',round:'r32', label:'M89', date:'3. Jul',
-    slotA:{src:'grp',g:'D',pos:2}, slotB:{src:'grp',g:'G',pos:2}},
+    slotA:{src:'grp',g:'K',pos:1}, slotB:{src:'grp3',groups:['L']}}, // Kolumbien vs Ghana
+  {id:'r32_15',round:'r32', label:'M73', date:'28. Jun',
+    slotA:{src:'grp',g:'A',pos:2}, slotB:{src:'grp',g:'B',pos:2}}, // Südafrika vs Kanada
+  {id:'r32_16',round:'r32', label:'M88', date:'3. Jul',
+    slotA:{src:'grp',g:'D',pos:2}, slotB:{src:'grp',g:'G',pos:2}}, // Australien vs Ägypten
 
-  // R16 — 8 matches
-  {id:'r16_1', round:'r16', label:'M90', date:'5. Jul',
-    slotA:{src:'ko',id:'r32_1',w:true}, slotB:{src:'ko',id:'r32_2',w:true}},
-  {id:'r16_2', round:'r16', label:'M91', date:'5. Jul',
-    slotA:{src:'ko',id:'r32_3',w:true}, slotB:{src:'ko',id:'r32_4',w:true}},
-  {id:'r16_3', round:'r16', label:'M92', date:'6. Jul',
-    slotA:{src:'ko',id:'r32_5',w:true}, slotB:{src:'ko',id:'r32_6',w:true}},
-  {id:'r16_4', round:'r16', label:'M93', date:'6. Jul',
-    slotA:{src:'ko',id:'r32_7',w:true}, slotB:{src:'ko',id:'r32_8',w:true}},
-  {id:'r16_5', round:'r16', label:'M94', date:'7. Jul',
-    slotA:{src:'ko',id:'r32_9',w:true}, slotB:{src:'ko',id:'r32_10',w:true}},
-  {id:'r16_6', round:'r16', label:'M95', date:'7. Jul',
-    slotA:{src:'ko',id:'r32_11',w:true}, slotB:{src:'ko',id:'r32_12',w:true}},
-  {id:'r16_7', round:'r16', label:'M96', date:'8. Jul',
-    slotA:{src:'ko',id:'r32_13',w:true}, slotB:{src:'ko',id:'r32_14',w:true}},
-  {id:'r16_8', round:'r16', label:'M97', date:'8. Jul',
-    slotA:{src:'ko',id:'r32_15',w:true}, slotB:{src:'ko',id:'r32_16',w:true}},
+  // R16 — 8 Spiele (echtes FIFA-Bracket-Muster M89–M96, KEIN einfaches 1-2/3-4-Pairing!)
+  {id:'r16_1', round:'r16', label:'M89', date:'4. Jul',
+    slotA:{src:'ko',id:'r32_3',w:true}, slotB:{src:'ko',id:'r32_4',w:true}}, // Sieger M74 vs Sieger M77
+  {id:'r16_2', round:'r16', label:'M90', date:'4. Jul',
+    slotA:{src:'ko',id:'r32_15',w:true}, slotB:{src:'ko',id:'r32_2',w:true}}, // Sieger M73 vs Sieger M75
+  {id:'r16_3', round:'r16', label:'M91', date:'5. Jul',
+    slotA:{src:'ko',id:'r32_1',w:true}, slotB:{src:'ko',id:'r32_5',w:true}}, // Sieger M76 vs Sieger M78
+  {id:'r16_4', round:'r16', label:'M92', date:'5. Jul',
+    slotA:{src:'ko',id:'r32_6',w:true}, slotB:{src:'ko',id:'r32_7',w:true}}, // Sieger M79 vs Sieger M80
+  {id:'r16_5', round:'r16', label:'M93', date:'6. Jul',
+    slotA:{src:'ko',id:'r32_10',w:true}, slotB:{src:'ko',id:'r32_11',w:true}}, // Sieger M83 vs Sieger M84
+  {id:'r16_6', round:'r16', label:'M94', date:'6. Jul',
+    slotA:{src:'ko',id:'r32_8',w:true}, slotB:{src:'ko',id:'r32_9',w:true}}, // Sieger M81 vs Sieger M82
+  {id:'r16_7', round:'r16', label:'M95', date:'7. Jul',
+    slotA:{src:'ko',id:'r32_13',w:true}, slotB:{src:'ko',id:'r32_16',w:true}}, // Sieger M86 vs Sieger M88
+  {id:'r16_8', round:'r16', label:'M96', date:'7. Jul',
+    slotA:{src:'ko',id:'r32_12',w:true}, slotB:{src:'ko',id:'r32_14',w:true}}, // Sieger M85 vs Sieger M87
 
-  // QF — 4 matches
-  {id:'qf_1', round:'qf', label:'M98', date:'11. Jul',
-    slotA:{src:'ko',id:'r16_1',w:true}, slotB:{src:'ko',id:'r16_2',w:true}},
-  {id:'qf_2', round:'qf', label:'M99', date:'11. Jul',
-    slotA:{src:'ko',id:'r16_3',w:true}, slotB:{src:'ko',id:'r16_4',w:true}},
-  {id:'qf_3', round:'qf', label:'M100', date:'12. Jul',
-    slotA:{src:'ko',id:'r16_5',w:true}, slotB:{src:'ko',id:'r16_6',w:true}},
-  {id:'qf_4', round:'qf', label:'M101', date:'12. Jul',
-    slotA:{src:'ko',id:'r16_7',w:true}, slotB:{src:'ko',id:'r16_8',w:true}},
+  // QF — 4 Spiele (M97–M100)
+  {id:'qf_1', round:'qf', label:'M97', date:'9. Jul',
+    slotA:{src:'ko',id:'r16_1',w:true}, slotB:{src:'ko',id:'r16_2',w:true}}, // Sieger M89 vs Sieger M90
+  {id:'qf_2', round:'qf', label:'M98', date:'10. Jul',
+    slotA:{src:'ko',id:'r16_5',w:true}, slotB:{src:'ko',id:'r16_6',w:true}}, // Sieger M93 vs Sieger M94
+  {id:'qf_3', round:'qf', label:'M99', date:'11. Jul',
+    slotA:{src:'ko',id:'r16_3',w:true}, slotB:{src:'ko',id:'r16_4',w:true}}, // Sieger M91 vs Sieger M92
+  {id:'qf_4', round:'qf', label:'M100', date:'11. Jul',
+    slotA:{src:'ko',id:'r16_7',w:true}, slotB:{src:'ko',id:'r16_8',w:true}}, // Sieger M95 vs Sieger M96
 
-  // SF — 2 matches
-  {id:'sf_1', round:'sf', label:'M102', date:'15. Jul',
-    slotA:{src:'ko',id:'qf_1',w:true}, slotB:{src:'ko',id:'qf_2',w:true}},
-  {id:'sf_2', round:'sf', label:'M103', date:'16. Jul',
-    slotA:{src:'ko',id:'qf_3',w:true}, slotB:{src:'ko',id:'qf_4',w:true}},
+  // SF — 2 Spiele (M101–M102)
+  {id:'sf_1', round:'sf', label:'M101', date:'14. Jul',
+    slotA:{src:'ko',id:'qf_1',w:true}, slotB:{src:'ko',id:'qf_2',w:true}}, // Sieger M97 vs Sieger M98
+  {id:'sf_2', round:'sf', label:'M102', date:'15. Jul',
+    slotA:{src:'ko',id:'qf_3',w:true}, slotB:{src:'ko',id:'qf_4',w:true}}, // Sieger M99 vs Sieger M100
 
-  // 3rd place
-  {id:'3p_1', round:'3p', label:'M104', date:'18. Jul',
+  // 3rd place (M103)
+  {id:'3p_1', round:'3p', label:'M103', date:'18. Jul',
     slotA:{src:'ko',id:'sf_1',w:false}, slotB:{src:'ko',id:'sf_2',w:false}},
 
-  // Final
-  {id:'final_1', round:'final', label:'M105', date:'19. Jul',
+  // Final (M104)
+  {id:'final_1', round:'final', label:'M104', date:'19. Jul',
     slotA:{src:'ko',id:'sf_1',w:true}, slotB:{src:'ko',id:'sf_2',w:true}},
 ];
 
@@ -1280,7 +1280,7 @@ function applyTwemoji(){
   twemoji.parse(document.body,{
     folder:'svg',
     ext:'.svg',
-    base:'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
+    base:'https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/'
   });
 }
 
@@ -2575,7 +2575,7 @@ function renderAPI(){
 
 // Twemoji-Bilder für Canvas (Turnierbaum). twemoji.parse() wirkt nur auf HTML, nicht auf <canvas>.
 const FLAG_CANVAS_CACHE = {};
-function flagToTwemojiUrl(flag){
+function flagToTwemojiUrl(flag, useFallbackCdn){
   if(!flag) return null;
   let code = null;
   if(window.twemoji && twemoji.convert && twemoji.convert.toCodePoint){
@@ -2583,17 +2583,29 @@ function flagToTwemojiUrl(flag){
   } else {
     code = Array.from(flag).map(ch => ch.codePointAt(0).toString(16)).join('-');
   }
-  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${code}.svg`;
+  // Primäre Quelle: aktiv gepflegter jdecked/twemoji-Fork über jsDelivr.
+  // Fallback: direkt aus dem GitHub-Repo (raw.githubusercontent.com), falls
+  // jsDelivr mal nicht erreichbar/aktuell ist.
+  return useFallbackCdn
+    ? `https://raw.githubusercontent.com/jdecked/twemoji/main/assets/svg/${code}.svg`
+    : `https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/${code}.svg`;
 }
 function getCanvasFlagImage(flag){
-  const url = flagToTwemojiUrl(flag);
-  if(!url) return null;
-  if(FLAG_CANVAS_CACHE[url]) return FLAG_CANVAS_CACHE[url];
+  const primaryUrl = flagToTwemojiUrl(flag, false);
+  if(!primaryUrl) return null;
+  if(FLAG_CANVAS_CACHE[primaryUrl]) return FLAG_CANVAS_CACHE[primaryUrl];
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => { if(activeTab === 'bracket') renderBracket(); };
-  img.src = url;
-  FLAG_CANVAS_CACHE[url] = img;
+  img.onerror = () => {
+    // Primäre CDN fehlgeschlagen — einmalig auf Fallback-Quelle umschalten
+    const fallbackUrl = flagToTwemojiUrl(flag, true);
+    if(fallbackUrl && img.src !== fallbackUrl){
+      img.src = fallbackUrl;
+    }
+  };
+  img.src = primaryUrl;
+  FLAG_CANVAS_CACHE[primaryUrl] = img;
   return img;
 }
 
@@ -2681,10 +2693,13 @@ function renderBracket(){
   function matchCY(ri,mi){ return matchY(ri,mi)+MH/2; }
 
   // ── KO match order ───────────────────────────────────────────
+  // Reihenfolge bestimmt die vertikale Position im Baum. Muss so sortiert sein,
+  // dass Slot-Paare (0,1), (2,3), ... visuell exakt in das jeweils nächste
+  // Rundenspiel münden (siehe echte FIFA-Bracket-Zuordnung in KO_BRACKET oben).
   const matchOrder={
-    r32:['r32_1','r32_2','r32_3','r32_4','r32_5','r32_6','r32_7','r32_8',
-         'r32_9','r32_10','r32_11','r32_12','r32_13','r32_14','r32_15','r32_16'],
-    r16:['r16_1','r16_2','r16_3','r16_4','r16_5','r16_6','r16_7','r16_8'],
+    r32:['r32_3','r32_4','r32_15','r32_2','r32_10','r32_11','r32_8','r32_9',
+         'r32_1','r32_5','r32_6','r32_7','r32_13','r32_16','r32_12','r32_14'],
+    r16:['r16_1','r16_2','r16_5','r16_6','r16_3','r16_4','r16_7','r16_8'],
     qf: ['qf_1','qf_2','qf_3','qf_4'],
     sf: ['sf_1','sf_2'],
     final:['final_1'],
